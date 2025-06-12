@@ -4,7 +4,6 @@ import Step2Import from './components/Step2Import'
 import Step3PlayerList from './components/Step3PlayerList'
 import Step4Generate from './components/Step4Generate'
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 library.add(fas)

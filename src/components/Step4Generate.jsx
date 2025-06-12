@@ -8,13 +8,60 @@ const Step4Generate = ({ handleStepChange, players, config, setTeams, teams }) =
   }, [])
 
   const generateTeams = () => {
-    const shuffled = shuffle(players)
+    const shuffled = [...players].sort(() => Math.random() - 0.5)
+
     const teamCount = Math.ceil(shuffled.length / config.playersPerTeam)
-    const result = Array.from({ length: teamCount }, () => [])
-    shuffled.forEach((p, i) => {
-      result[i % teamCount].push(p)
-    })
-    setTeams(result)
+    const teams = Array.from({ length: teamCount }, () => [])
+
+    const totalSkill = players.reduce((sum, p) => sum + p.skill, 0)
+    const averageTeamSize = Math.floor(shuffled.length / teamCount)
+    const teamSizes = Array.from({ length: teamCount }, (_, i) =>
+      i < shuffled.length % teamCount ? averageTeamSize + 1 : averageTeamSize
+    )
+
+    // Répartir équitablement le genre minoritaire
+    const males = shuffled.filter((p) => p.gender === 'male')
+    const females = shuffled.filter((p) => p.gender === 'female')
+    const minority = males.length < females.length ? males : females
+    const majority = males.length < females.length ? females : males
+
+    // Injecter au moins un genre minoritaire dans chaque équipe si possible
+    const teamsWithMinority = new Set()
+    for (let i = 0; i < minority.length; i++) {
+      const t = i % teamCount
+      if (teams[t].length < teamSizes[t]) {
+        teams[t].push(minority[i])
+        teamsWithMinority.add(t)
+      }
+    }
+
+    // Répartir le reste
+    const alreadyUsed = new Set(minority.map((p) => p.id))
+    const rest = shuffled.filter((p) => !alreadyUsed.has(p.id))
+
+    // Sort by skill descending to assign the best remaining players where needed
+    rest.sort((a, b) => b.skill - a.skill)
+
+    for (const player of rest) {
+      // Trouver l'équipe la plus faible et qui n'est pas encore pleine
+      const incompleteTeams = teams
+        .map((team, index) => ({
+          index,
+          team,
+          totalSkill: team.reduce((sum, p) => sum + p.skill, 0),
+          count: team.length,
+        }))
+        .filter((t) => t.count < teamSizes[t.index])
+
+      // Parmi celles-ci, choisir celle avec le total de skill le plus faible
+      incompleteTeams.sort((a, b) => a.totalSkill - b.totalSkill)
+
+      if (incompleteTeams.length > 0) {
+        teams[incompleteTeams[0].index].push(player)
+      }
+    }
+
+    setTeams(teams)
   }
 
   return (

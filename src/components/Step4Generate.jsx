@@ -28,13 +28,16 @@ const Step4Generate = ({ handleStepChange, players, config, setTeams, teams }) =
               <div key={i} className="col-md-4 mb-3">
                 <div className="card">
                   <div className="card-header bg-light fw-bold">Équipe #{i + 1}</div>
-                  <ul className="list-group list-group-flush">
+                  <div className="list-group list-group-flush">
                     {team.map((p, j) => (
-                      <li key={j} className="list-group-item">
-                        {p.name}
-                      </li>
+                      <div key={j} className="list-group-item py-0">
+                        <div className="row align-items-center">
+                          <div className="col col-11">{p.name}</div>
+                          <div className="col col-1 border-start py-2">{p.skill}</div>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             ))}

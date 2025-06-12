@@ -20,7 +20,7 @@ button {
 }
 
 .text-red {
-  color: #e43425;
+  color: #e43425 !important;
 }
 
 .btn.btn-red {

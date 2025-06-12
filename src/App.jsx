@@ -4,6 +4,11 @@ import Step2Import from './components/Step2Import'
 import Step3PlayerList from './components/Step3PlayerList'
 import Step4Generate from './components/Step4Generate'
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { fas } from '@fortawesome/free-solid-svg-icons'
+library.add(fas)
+
 const App = () => {
   const [step, setStep] = useState(1)
   const [config, setConfig] = useState({ playersPerTeam: 0, skillRange: 0 })
@@ -15,9 +20,9 @@ const App = () => {
   return (
     <div className="pt-5">
       <header className="navbar navbar-sm bg-red fixed-top">
-        <div className="container-fluid py-3 text-white fw-bold">
+        <div className="container py-3 text-white fw-bold">
           <div className="d-flex justify-content-between text-white fw-bold w-100">
-            <h1>Générateur d'équipes</h1>
+            <div>Générateur d'équipes</div>
             <div>{step} / 4</div>
           </div>
         </div>

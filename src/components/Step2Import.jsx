@@ -41,6 +41,14 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
   return (
     <div>
       <h2 className="mb-3 text-red">Importer des joueur·euse·s</h2>
+      {players.length > 0 && (
+        <div className="alert alert-light fw-bold">
+          Vous avez déjà ajouté {players.length} joueur.euse.s{' '}
+          <button class="btn btn-link text-red p-0" onClick={() => handleStepChange(3)}>
+            Aller directement à la liste de joueur.euse.s
+          </button>
+        </div>
+      )}
       <p>Format : Prénom Nom, niveau, genre (m/f)</p>
       <textarea
         rows="10"

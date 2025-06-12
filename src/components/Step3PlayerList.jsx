@@ -77,80 +77,28 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
     <div>
       <h2 className="mb-3 text-red">Liste des joueur·euse·s ({players.length})</h2>
 
-      <div className="row">
-        <div className="col col-12 col-md-8 col-lg-6">
-          {sortedPlayers.map((player) => (
-            <div
-              key={player.id}
-              ref={(el) => (rowRefs.current[player.id] = el)}
-              className={`align-items-center py-1 flex-wrap ${highlightedIndex === player.id ? 'bg-warning-subtle' : ''}`}
-            >
-              <div className="row align-items-center justify-content-between">
-                <div className="col col-9 pe-0">
-                  <div className="input-group input-group-sm" style={{ maxWidth: '100%' }}>
-                    <input
-                      className="form-control flex-grow-1"
-                      type="text"
-                      value={player.name}
-                      onChange={(e) => handleNameChange(player.id, e.target.value)}
-                      required
-                    />
-                    <select
-                      className="form-select"
-                      style={{ maxWidth: '70px', flexShrink: 0 }}
-                      value={player.skill}
-                      onChange={(e) => handleSkillChange(player.id, e.target.value)}
-                    >
-                      {[...Array(maxSkill)].map((_, n) => (
-                        <option key={n + 1} value={n + 1}>
-                          {n + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="col col-auto justify-content-between">
-                  <button
-                    className={`btn btn-sm me-2 ${player.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
-                    onClick={() => toggleGender(player.id)}
-                  >
-                    <FontAwesomeIcon icon={player.gender === 'female' ? 'venus' : 'mars'} />
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline-red fw-bold"
-                    onClick={() => removePlayer(player.id)}
-                  >
-                    <FontAwesomeIcon icon="trash" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <hr />
-
-          <div className="mt-3">
-            <div className="row align-items-center justify-content-between">
-              <div className="col col-9 pe-0">
-                <div className="input-group input-group-sm" style={{ maxWidth: '100%' }}>
+      <div className="fixed-controls-content">
+        {sortedPlayers.map((player) => (
+          <div
+            key={player.id}
+            ref={(el) => (rowRefs.current[player.id] = el)}
+            className={`align-items-center py-1 flex-wrap ${highlightedIndex === player.id ? 'bg-warning-subtle' : ''}`}
+          >
+            <div className="row align-items-center justify-content-start">
+              <div className="col pe-0">
+                <div className="input-group input-group" style={{ maxWidth: '100%' }}>
                   <input
                     className="form-control flex-grow-1"
                     type="text"
-                    placeholder="Nom du nouveau joueur·euse"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddNewPlayer()
-                    }}
-                    value={newPlayer.name}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                    value={player.name}
+                    onChange={(e) => handleNameChange(player.id, e.target.value)}
+                    required
                   />
                   <select
                     className="form-select"
                     style={{ maxWidth: '70px', flexShrink: 0 }}
-                    value={newPlayer.skill}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, skill: parseInt(e.target.value) })
-                    }
+                    value={player.skill}
+                    onChange={(e) => handleSkillChange(player.id, e.target.value)}
                   >
                     {[...Array(maxSkill)].map((_, n) => (
                       <option key={n + 1} value={n + 1}>
@@ -160,48 +108,98 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
                   </select>
                 </div>
               </div>
-              <div className="col col-auto justify-content-between">
+
+              <div className="col col-auto justify-content-start">
                 <button
-                  className={`btn btn-sm me-2 ${newPlayer.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
-                  onClick={() =>
-                    setNewPlayer({
-                      ...newPlayer,
-                      gender: newPlayer.gender === 'male' ? 'female' : 'male',
-                    })
-                  }
+                  className={`btn me-2 ${player.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
+                  onClick={() => toggleGender(player.id)}
                 >
-                  <FontAwesomeIcon icon={newPlayer.gender === 'female' ? 'venus' : 'mars'} />
+                  <FontAwesomeIcon icon={player.gender === 'female' ? 'venus' : 'mars'} />
                 </button>
                 <button
-                  className="btn btn-sm btn-success fw-bold"
-                  onClick={handleAddNewPlayer}
-                  disabled={newPlayer.name.trim() === ''}
-                  title="Ajouter le joueur·euse"
+                  className="btn btn-outline-red fw-bold"
+                  onClick={() => removePlayer(player.id)}
                 >
-                  <FontAwesomeIcon icon="plus" />
+                  <FontAwesomeIcon icon="trash" />
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      <div className="row justify-content-between mt-4">
-        <div className="col col-auto">
-          <button className="btn btn-outline-red" onClick={() => handleStepChange(2)}>
-            &lt; Retour
-          </button>
+      <hr className="d-none d-md-block" />
+
+      <div className="fixed-controls p-3 p-md-0 shadow-lg">
+        <div className="mt-3">
+          <div className="row align-items-center justify-content-start">
+            <div className="col pe-0">
+              <div className="input-group input-group" style={{ maxWidth: '100%' }}>
+                <input
+                  className="form-control flex-grow-1"
+                  type="text"
+                  placeholder="Nom du nouveau joueur·euse"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddNewPlayer()
+                  }}
+                  value={newPlayer.name}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                />
+                <select
+                  className="form-select"
+                  style={{ maxWidth: '70px', flexShrink: 0 }}
+                  value={newPlayer.skill}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, skill: parseInt(e.target.value) })}
+                >
+                  {[...Array(maxSkill)].map((_, n) => (
+                    <option key={n + 1} value={n + 1}>
+                      {n + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="col col-auto justify-content-start">
+              <button
+                className={`btn me-2 ${newPlayer.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
+                onClick={() =>
+                  setNewPlayer({
+                    ...newPlayer,
+                    gender: newPlayer.gender === 'male' ? 'female' : 'male',
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={newPlayer.gender === 'female' ? 'venus' : 'mars'} />
+              </button>
+              <button
+                className="btn btn-success fw-bold"
+                onClick={handleAddNewPlayer}
+                disabled={newPlayer.name.trim() === ''}
+                title="Ajouter le joueur·euse"
+              >
+                <FontAwesomeIcon icon="plus" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="col col-auto">
-          <button
-            className="btn btn-red"
-            onClick={() => handleStepChange(4)}
-            disabled={!isValid}
-            title={!isValid ? 'Certains noms sont vides' : ''}
-          >
-            Valider
-          </button>
+        <div className="row justify-content-between mt-4">
+          <div className="col col-auto">
+            <button className="btn btn-outline-red" onClick={() => handleStepChange(2)}>
+              &lt; Retour
+            </button>
+          </div>
+
+          <div className="col col-auto">
+            <button
+              className="btn btn-red"
+              onClick={() => handleStepChange(4)}
+              disabled={!isValid}
+              title={!isValid ? 'Certains noms sont vides' : ''}
+            >
+              Valider
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
+const Step2Import = ({ handleStepChange, players, setPlayers }) => {
   const [inputText, setInputText] = useState('')
 
   const parseLine = (line) => {
@@ -9,10 +9,7 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
     const [name, skillStr, genderRaw] = parts
     const skill = parseInt(skillStr)
     const gender = genderRaw?.toLowerCase() === 'f' ? 'female' : 'male'
-    if (!name || isNaN(skill) || skill < 1 || skill > Number(config.skillRange)) {
-      alert(`Le niveau de ${name} est invalide ou hors plage (1 à ${config.skillRange}).`)
-      return null
-    }
+
     return { id: crypto.randomUUID(), name, skill, gender }
   }
 
@@ -39,17 +36,20 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
   }
 
   return (
-    <div>
+    <div className="text-center">
       <h2 className="mb-3 text-red">Importer des joueur·euse·s</h2>
       {players.length > 0 && (
         <div className="alert alert-light fw-bold">
           Vous avez déjà ajouté {players.length} joueur.euse.s{' '}
-          <button class="btn btn-link text-red p-0" onClick={() => handleStepChange(3)}>
+          <button className="btn btn-link text-red p-0" onClick={() => handleStepChange(3)}>
             Aller directement à la liste de joueur.euse.s
           </button>
         </div>
       )}
-      <p>Format : Prénom Nom, niveau, genre (m/f)</p>
+      <p className="text-muted mb-3">
+        <i>Le niveau 1 correspond aux débutant.e.s</i>
+      </p>
+
       <textarea
         rows="10"
         placeholder="Prénom Nom, 4, m"

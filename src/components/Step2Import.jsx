@@ -9,17 +9,30 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
     const [name, skillStr, genderRaw] = parts
     const skill = parseInt(skillStr)
     const gender = genderRaw?.toLowerCase() === 'f' ? 'female' : 'male'
-    if (!name || isNaN(skill) || skill < 1 || skill > config.skillRange) return null
-    return { name, skill, gender }
+    if (!name || isNaN(skill) || skill < 1 || skill > Number(config.skillRange)) {
+      alert(`Le niveau de ${name} est invalide ou hors plage (1 à ${config.skillRange}).`)
+      return null
+    }
+    return { id: crypto.randomUUID(), name, skill, gender }
   }
 
   const handleImport = () => {
-    const lines = inputText.split('\n')
+    const lines = inputText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+    if (lines.length === 0) {
+      alert('La liste est vide. Veuillez saisir au moins un·e joueur·euse.')
+      return
+    }
+
     const newPlayers = []
     for (const line of lines) {
       const parsed = parseLine(line)
+
       if (parsed) newPlayers.push(parsed)
     }
+
     setPlayers([...players, ...newPlayers])
     setInputText('')
     handleStepChange(3)
@@ -27,7 +40,7 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
 
   return (
     <div>
-      <h2 className="mb-3">(2/5) Importer des joueur·euse·s</h2>
+      <h2 className="mb-3 text-red">Importer des joueur·euse·s</h2>
       <p>Format : Prénom Nom, niveau, genre (m/f)</p>
       <textarea
         rows="10"
@@ -36,15 +49,15 @@ const Step2Import = ({ handleStepChange, players, setPlayers, config }) => {
         onChange={(e) => setInputText(e.target.value)}
         className="form-control mb-3"
       />
-      <div className="row justify-content-between my-4">
+      <div className="row justify-content-between mt-4">
         <div className="col col-auto">
-          <button className="btn btn-secondary" onClick={() => handleStepChange(1)}>
+          <button className="btn btn-outline-red" onClick={() => handleStepChange(1)}>
             &lt; Retour
           </button>
         </div>
 
         <div className="col col-auto">
-          <button className="btn btn-primary" onClick={handleImport}>
+          <button className="btn btn-red" onClick={handleImport}>
             Importer
           </button>
         </div>

@@ -13,32 +13,49 @@ const App = () => {
   const handleStepChange = (n) => setStep(n)
 
   return (
-    <div className="container">
-      {step === 1 && <Step1Setup handleStepChange={handleStepChange} setConfig={setConfig} />}
-      {step === 2 && (
-        <Step2Import
-          handleStepChange={handleStepChange}
-          players={players}
-          setPlayers={setPlayers}
-          config={config}
-        />
-      )}
-      {step === 3 && (
-        <Step3PlayerList
-          handleStepChange={handleStepChange}
-          players={players}
-          setPlayers={setPlayers}
-        />
-      )}
-      {step === 4 && (
-        <Step4Generate
-          handleStepChange={handleStepChange}
-          players={players}
-          config={config}
-          setTeams={setTeams}
-          teams={teams}
-        />
-      )}
+    <div className="pt-5">
+      <header className="navbar navbar-sm bg-red fixed-top">
+        <div className="container-fluid py-3 text-white fw-bold">
+          <div className="d-flex justify-content-between text-white fw-bold w-100">
+            <h1>Générateur d'équipes</h1>
+            <div>{step} / 4</div>
+          </div>
+        </div>
+      </header>
+      <main id="main" className="container mt-3">
+        {step === 1 && <Step1Setup handleStepChange={handleStepChange} setConfig={setConfig} />}
+        {step === 2 && (
+          <Step2Import
+            handleStepChange={handleStepChange}
+            players={players}
+            setPlayers={setPlayers}
+            config={config}
+          />
+        )}
+        {step === 3 && (
+          <Step3PlayerList
+            handleStepChange={handleStepChange}
+            players={players}
+            setPlayers={setPlayers}
+          />
+        )}
+        {step === 4 && (
+          <Step4Generate
+            handleStepChange={handleStepChange}
+            players={players}
+            config={config}
+            setTeams={setTeams}
+            teams={teams}
+          />
+        )}
+      </main>
+      <footer className="text-center text-muted bg-light py-2">
+        <small>
+          <a href="https://github.com/Sayannel" target="_blank" rel="noopener noreferrer">
+            &copy; Axel Gaillard
+          </a>
+        </small>
+      </footer>
     </div>
   )
 }

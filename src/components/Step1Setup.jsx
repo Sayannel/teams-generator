@@ -12,7 +12,7 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="mb-4">(1/5) Configurer les équipes</h2>
+      <h2 className="mb-3 text-red">Configurer les équipes</h2>
       <div className="mb-3">
         <label className="form-label">Nombre de joueur·euse·s par équipe :</label>
         <input
@@ -34,9 +34,9 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
         />
       </div>
 
-      <div className="row justify-content-end my-4">
+      <div className="row justify-content-end mt-4">
         <div className="col col-auto">
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-red">
             Valider
           </button>
         </div>

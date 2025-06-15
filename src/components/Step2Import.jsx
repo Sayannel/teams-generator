@@ -3,12 +3,28 @@ import React, { useState } from 'react'
 const Step2Import = ({ handleStepChange, players, setPlayers }) => {
   const [inputText, setInputText] = useState('')
 
-  const parseLine = (line) => {
+  const parseLine = (line, lineIndex, errors) => {
     const parts = line.split(/[,\t]/).map((p) => p.trim())
-    if (parts.length < 2) return null
+    if (parts.length < 3) {
+      errors.push(`Ligne ${lineIndex + 1} mal formée : "${line}"`)
+      return null
+    }
+
     const [name, skillStr, genderRaw] = parts
-    const skill = parseInt(skillStr)
-    const gender = genderRaw?.toLowerCase() === 'f' ? 'female' : 'male'
+    const skill = parseInt(skillStr, 10)
+    const genderValue = genderRaw?.toLowerCase()
+
+    if (!name || isNaN(skill) || skill <= 0) {
+      errors.push(`Ligne ${lineIndex + 1} invalide (nom ou niveau incorrect) : "${line}"`)
+      return null
+    }
+
+    if (!['m', 'f', 'male', 'female'].includes(genderValue)) {
+      errors.push(`Ligne ${lineIndex + 1} invalide (genre inconnu) : "${line}"`)
+      return null
+    }
+
+    const gender = ['f', 'female'].includes(genderValue) ? 'female' : 'male'
 
     return { id: crypto.randomUUID(), name, skill, gender }
   }
@@ -18,16 +34,26 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
+
     if (lines.length === 0) {
       alert('La liste est vide. Veuillez saisir au moins un·e joueur·euse.')
       return
     }
 
     const newPlayers = []
-    for (const line of lines) {
-      const parsed = parseLine(line)
+    const errors = []
 
+    lines.forEach((line, index) => {
+      const parsed = parseLine(line, index, errors)
       if (parsed) newPlayers.push(parsed)
+    })
+
+    if (errors.length > 0) {
+      alert(`Certaines lignes ont été ignorées :\n\n${errors.join('\n')}`)
+    }
+
+    if (newPlayers.length === 0) {
+      return
     }
 
     setPlayers([...players, ...newPlayers])
@@ -38,6 +64,7 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
   return (
     <div className="text-center">
       <h2 className="mb-3 text-red">Importer des joueur·euse·s</h2>
+
       {players.length > 0 && (
         <div className="alert alert-light fw-bold">
           Vous avez déjà ajouté {players.length} joueur.euse.s{' '}
@@ -46,8 +73,9 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
           </button>
         </div>
       )}
+
       <p className="text-muted mb-3">
-        <i>Le niveau 1 correspond aux débutant.e.s</i>
+        <i>Le niveau 1 correspond aux débutant·e·s. Il n'y a pas de niveau maximum.</i>
       </p>
 
       <textarea
@@ -57,6 +85,7 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
         onChange={(e) => setInputText(e.target.value)}
         className="form-control mb-3"
       />
+
       <div className="row justify-content-between mt-4">
         <div className="col col-auto">
           <button className="btn btn-outline-red" onClick={() => handleStepChange(1)}>

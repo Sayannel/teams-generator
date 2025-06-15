@@ -9,7 +9,7 @@ body {
 }
 
 #step1Setup {
-    min-height: calc(100vh - 170px);
+    min-height: calc(100vh - 206px);
 }
 
 button {

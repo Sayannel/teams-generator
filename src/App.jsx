@@ -17,12 +17,21 @@ const App = () => {
   const handleStepChange = (n) => setStep(n)
 
   return (
-    <div className="pt-5">
-      <header className="navbar navbar-sm bg-red fixed-top">
-        <div className="container py-3 text-white fw-bold">
-          <div className="d-flex justify-content-between text-white fw-bold w-100">
-            <div>Générateur d'équipes</div>
-            <div>{step} / 4</div>
+    <div>
+      <header className="navbar navbar-sm bg-red">
+        <div className="container py-3 text-white justify-content-center">
+          <div className="col col-md-8">
+            <div className="d-flex justify-content-between text-white w-100">
+              <div>
+                <button
+                  className="btn btn-link text-white text-decoration-none fw-bold"
+                  onClick={() => setStep(1)}
+                >
+                  Générateur d'équipes
+                </button>
+              </div>
+              <div className="fw-bold">{step} / 4</div>
+            </div>
           </div>
         </div>
       </header>

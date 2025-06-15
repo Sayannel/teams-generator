@@ -28,7 +28,7 @@ const App = () => {
       </header>
       <main id="main" className="container mt-3">
         <div className="row justify-content-center">
-          <div className="col col-12 col-md-8 col-lg-6">
+          <div className="col col-12 col-md-8">
             {step === 1 && <Step1Setup handleStepChange={handleStepChange} setConfig={setConfig} />}
             {step === 2 && (
               <Step2Import

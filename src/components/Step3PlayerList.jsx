@@ -75,9 +75,18 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
 
   return (
     <div>
-      <h2 className="mb-3 text-red">Liste des joueur·euse·s ({players.length})</h2>
+      <h2 className="mb-3 text-red">Liste des joueur·euse·s</h2>
 
-      <div className="fixed-controls-content">
+      <div id="players-list" className="fixed-controls-content">
+        {sortedPlayers.length === 0 && (
+          <div className="text-center my-5">
+            <FontAwesomeIcon icon="question" className="display-2" />
+            <br />
+            <div className="mt-3">
+              <span className="display-4">Y a quelqu'un ?</span>
+            </div>
+          </div>
+        )}
         {sortedPlayers.map((player) => (
           <div
             key={player.id}
@@ -100,7 +109,7 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
                     value={player.skill}
                     onChange={(e) => handleSkillChange(player.id, e.target.value)}
                   >
-                    {[...Array(maxSkill)].map((_, n) => (
+                    {[...Array(maxSkill < 8 ? 10 : maxSkill + 3)].map((_, n) => (
                       <option key={n + 1} value={n + 1}>
                         {n + 1}
                       </option>
@@ -151,7 +160,7 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
                   value={newPlayer.skill}
                   onChange={(e) => setNewPlayer({ ...newPlayer, skill: parseInt(e.target.value) })}
                 >
-                  {[...Array(maxSkill)].map((_, n) => (
+                  {[...Array(maxSkill < 8 ? 10 : maxSkill + 3)].map((_, n) => (
                     <option key={n + 1} value={n + 1}>
                       {n + 1}
                     </option>
@@ -161,7 +170,7 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
             </div>
             <div className="col col-auto justify-content-start">
               <button
-                className={`btn me-2 ${newPlayer.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
+                className={`btn ${newPlayer.gender === 'male' ? 'btn-outline-primary' : 'btn-outline-red'}`}
                 onClick={() =>
                   setNewPlayer({
                     ...newPlayer,
@@ -171,17 +180,23 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
               >
                 <FontAwesomeIcon icon={newPlayer.gender === 'female' ? 'venus' : 'mars'} />
               </button>
+            </div>
+          </div>
+          <div className="row mt-2">
+            <div className="col">
               <button
-                className="btn btn-success fw-bold"
+                className="btn btn-success fw-bold w-100"
                 onClick={handleAddNewPlayer}
                 disabled={newPlayer.name.trim() === ''}
                 title="Ajouter le joueur·euse"
               >
-                <FontAwesomeIcon icon="plus" />
+                <FontAwesomeIcon icon="plus" /> Ajouter
               </button>
             </div>
           </div>
         </div>
+
+        <hr />
 
         <div className="row justify-content-between mt-4">
           <div className="col col-auto">
@@ -193,11 +208,17 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
           <div className="col col-auto">
             <button
               className="btn btn-red"
-              onClick={() => handleStepChange(4)}
+              onClick={() => {
+                if (players.length > 0) {
+                  handleStepChange(4)
+                } else {
+                  alert('La liste est vide. Veuillez saisir au moins un·e joueur·euse.')
+                }
+              }}
               disabled={!isValid}
               title={!isValid ? 'Certains noms sont vides' : ''}
             >
-              Valider
+              Valider &gt;
             </button>
           </div>
         </div>

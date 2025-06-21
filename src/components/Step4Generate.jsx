@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import PlayerSkillSummary from './PlayerSkillSummary'
+import TeamSummary from './TeamSummary'
 
-const Step4Generate = ({ handleStepChange, players, config }) => {
+const Step4Generate = ({ handleStepChange, players, config, teams, setTeams }) => {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
-  const [teams, setTeams] = useState([])
   const [balanceScore, setBalanceScore] = useState(null)
   const [genderParityScore, setGenderParityScore] = useState(null)
   const [maxPlayerByTeam, setMaxPlayerByTeam] = useState(0)
@@ -11,6 +12,12 @@ const Step4Generate = ({ handleStepChange, players, config }) => {
   useEffect(() => {
     generateBestTeams()
   }, [])
+
+  const regenerateTeams = () => {
+    if (window.confirm('Es-tu sûr·e de vouloir relancer la génération des équipes ?')) {
+      generateBestTeams()
+    }
+  }
 
   const evaluateBalanceScore = (teams) => {
     const totals = teams.map((team) => team.reduce((sum, p) => sum + p.skill, 0))
@@ -185,83 +192,68 @@ const Step4Generate = ({ handleStepChange, players, config }) => {
 
   return (
     <div>
-      <h2 className="mb-3 text-red">Génération</h2>
-
-      {balanceScore && (
-        <div className={`alert alert-${balanceScore.status}`}>
-          <strong>Équilibrage :</strong> {balanceScore.label} (écart max : {balanceScore.gap})
+      <div className="row align-items-center justify-content-between mb-3">
+        <div className="col col-auto">
+          <h2 className=" text-red mb-0">Génération</h2>
         </div>
-      )}
 
-      {genderParityScore && (
-        <div className={`alert alert-${genderParityScore.status}`}>
-          <strong>Parité :</strong> {genderParityScore.label} (écart max : {genderParityScore.gap})
-        </div>
-      )}
-
-      <div className="row">
-        {teams.map((team, i) => {
-          const teamSkill = team.reduce((sum, p) => sum + p.skill, 0)
-          const isIncomplete = team.length < maxPlayerByTeam
-
-          return (
-            <div key={i} className="col-md-6 mb-3">
-              <div className="card">
-                <div className="card-header bg-light fw-bold">
-                  <div className="row justify-content-between align-items-center">
-                    <div className="col col-auto">
-                      <h5 className="mb-0">Équipe #{i + 1}</h5>
-                    </div>
-                    <div className="col col-auto">
-                      <span className="badge bg-red">Total : {teamSkill}</span>
-                      {isIncomplete && (
-                        <span className="badge bg-warning text-dark ms-2">incomplète</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="list-group list-group-flush">
-                  {team.map((p, j) => (
-                    <div
-                      key={j}
-                      className={`list-group-item py-0 ${
-                        selectedPlayer?.teamIndex === i && selectedPlayer?.playerIndex === j
-                          ? 'bg-secondary'
-                          : ''
-                      }`}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="row align-items-center">
-                        <div className="col col-2 text-center border-end py-2">{p.skill}</div>
-                        <div className="col col-8">{p.name}</div>
-                        <div className="col col-2">
-                          <button
-                            className="btn btn-outline-red btn-sm"
-                            onClick={() => handlePlayerSwap(i, j)}
-                          >
-                            <FontAwesomeIcon icon="arrow-right-arrow-left" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <div className="col col-auto">
+          {(balanceScore || genderParityScore) && (
+            <div>
+              {balanceScore && (
+                <span className={`ms-2 badge bg-${balanceScore.status}`}>{balanceScore.label}</span>
+              )}
+              {genderParityScore && (
+                <span className={`ms-2 badge bg-${genderParityScore.status}`}>
+                  {genderParityScore.label}
+                </span>
+              )}
             </div>
-          )
-        })}
+          )}
+        </div>
       </div>
 
-      <div className="row justify-content-between mt-4">
-        <div className="col col-auto">
-          <button className="btn btn-outline-red" onClick={() => handleStepChange(3)}>
-            &lt; Retour
-          </button>
+      <div id="teams-list" className="fixed-controls-content">
+        <div className="mb-4">
+          <PlayerSkillSummary players={players} />
         </div>
-        <div className="col col-auto">
-          <button className="btn btn-red mb-4" onClick={generateBestTeams}>
-            Relancer la génération
-          </button>
+
+        <div className="row">
+          {teams.map((team, i) => (
+            <TeamSummary
+              team={team}
+              maxPlayerByTeam={maxPlayerByTeam}
+              selectedPlayer={selectedPlayer}
+              handlePlayerSwap={handlePlayerSwap}
+              index={i}
+              key={i}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="fixed-controls p-3 p-md-0 shadow-lg">
+        <div className="text-center">
+          <div className="col col-auto">
+            <button className="btn btn-red fw-bold w-100" onClick={regenerateTeams}>
+              Relancer la génération
+            </button>
+          </div>
+        </div>
+
+        <hr />
+
+        <div className="row justify-content-between">
+          <div className="col col-auto">
+            <button className="btn btn-outline-red" onClick={() => handleStepChange(3)}>
+              &lt; Retour
+            </button>
+          </div>
+          <div className="col col-auto">
+            <button className="btn btn-red" onClick={() => handleStepChange(5)}>
+              Valider les équipes &gt;
+            </button>
+          </div>
         </div>
       </div>
     </div>

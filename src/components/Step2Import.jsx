@@ -4,27 +4,38 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
   const [inputText, setInputText] = useState('')
 
   const parseLine = (line, lineIndex, errors) => {
-    const parts = line.split(/[,\t]/).map((p) => p.trim())
-    if (parts.length < 3) {
-      errors.push(`Ligne ${lineIndex + 1} mal formée : "${line}"`)
+    const parts = line
+      .split(/[,\t]/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    if (parts.length === 0) {
+      errors.push(`Ligne ${lineIndex + 1} vide ou invalide : "${line}"`)
       return null
     }
 
-    const [name, skillStr, genderRaw] = parts
-    const skill = parseInt(skillStr, 10)
-    const genderValue = genderRaw?.toLowerCase()
+    const name = parts[0]
+    let skill = 1
+    let gender = 'male'
 
-    if (!name || isNaN(skill) || skill <= 0) {
-      errors.push(`Ligne ${lineIndex + 1} invalide (nom ou niveau incorrect) : "${line}"`)
-      return null
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i].toLowerCase()
+      if (!isNaN(Number(part))) {
+        skill = parseInt(part, 10)
+      } else if (['m', 'male'].includes(part)) {
+        gender = 'male'
+      } else if (['f', 'female'].includes(part)) {
+        gender = 'female'
+      } else {
+        errors.push(`Ligne ${lineIndex + 1} : valeur inconnue "${parts[i]}"`)
+        return null
+      }
     }
 
-    if (!['m', 'f', 'male', 'female'].includes(genderValue)) {
-      errors.push(`Ligne ${lineIndex + 1} invalide (genre inconnu) : "${line}"`)
+    if (!name || skill <= 0 || isNaN(skill)) {
+      errors.push(`Ligne ${lineIndex + 1} invalide (nom ou niveau) : "${line}"`)
       return null
     }
-
-    const gender = ['f', 'female'].includes(genderValue) ? 'female' : 'male'
 
     return { id: crypto.randomUUID(), name, skill, gender }
   }
@@ -67,36 +78,49 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
 
       {players.length > 0 && (
         <div className="alert alert-light fw-bold">
-          Vous avez déjà ajouté {players.length} joueur.euse.s{' '}
+          Vous avez déjà ajouté {players.length} joueur·euse·s{' '}
           <button className="btn btn-link text-red p-0" onClick={() => handleStepChange(3)}>
-            Aller directement à la liste de joueur.euse.s
+            Aller directement à la liste de joueur·euse·s
           </button>
         </div>
       )}
 
       <p className="text-muted mb-3">
-        <i>Le niveau 1 correspond aux débutant·e·s. Il n'y a pas de niveau maximum.</i>
+        <i>Le niveau 1 correspond aux débutant·e·s et il n'y a pas de niveau maximum.</i>
+        <br />
+        Les lignes peuvent contenir : <code>Nom</code>, <code>genre (m/f)</code>,{' '}
+        <code>niveau</code>
       </p>
 
       <textarea
         rows="10"
-        placeholder="Prénom Nom, 4, m"
+        placeholder={'Axel G, 4, m\nAxel G, 4\nAxel G, m'}
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
         className="form-control mb-3"
       />
 
-      <div className="row justify-content-between mt-4">
-        <div className="col col-auto">
-          <button className="btn btn-outline-red" onClick={() => handleStepChange(1)}>
-            &lt; Retour
+      <div className="fixed-controls p-3 p-md-0 shadow-lg">
+        <div className="text-center mt-4">
+          <button className="btn btn-red w-100" onClick={handleImport}>
+            Importer
           </button>
         </div>
 
-        <div className="col col-auto">
-          <button className="btn btn-red" onClick={handleImport}>
-            Importer
-          </button>
+        <hr />
+
+        <div className="row justify-content-between ">
+          <div className="col col-auto">
+            <button className="btn btn-outline-red" onClick={() => handleStepChange(1)}>
+              &lt; Retour
+            </button>
+          </div>
+
+          <div className="col col-auto">
+            <button className="btn btn-red" onClick={() => handleStepChange(3)}>
+              Passer l'import &gt;
+            </button>
+          </div>
         </div>
       </div>
     </div>

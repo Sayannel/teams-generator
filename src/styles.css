@@ -8,8 +8,13 @@ body {
     padding: 2rem;
 }
 
+#app-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
 #step1Setup {
-    min-height: calc(100vh - 206px);
+    min-height: calc(100vh - 170px);
 }
 
 button {
@@ -71,8 +76,13 @@ button {
     transition: background-color 0.3s ease;
 }
 
-.fixed-controls-content {
-    margin-bottom: 140px;
+#players-list {
+    margin-bottom: 200px;
+}
+#teams-list {
+    margin-bottom: 120px;
+}
+.fixed-controls-content{
     @media all and (min-width: 768px) {
         margin-bottom: 0;
     }
@@ -85,6 +95,7 @@ button {
     left: 0;
     background: #fff;
     border-top: 1px solid #ccc;
+    z-index: 10;
     @media all and (min-width: 768px) {
         position: relative;
         width: unset;

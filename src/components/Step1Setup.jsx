@@ -28,7 +28,7 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
 
         <div className="text-center my-4">
           <button type="submit" className="btn btn-red">
-            Valider le nombre de joueur.euse.s
+            Valider le nombre de joueur·euse·s
           </button>
         </div>
       </form>
@@ -59,6 +59,9 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
             </li>
             <li>
               <strong>Étape 4 :</strong> Générez les équipes équilibrées automatiquement.
+            </li>
+            <li>
+              <strong>Étape 5 :</strong> Affichez la liste finale des équipes.
             </li>
           </ul>
           <p className="mb-0">L’algorithme essaie de respecter les points suivants :</p>

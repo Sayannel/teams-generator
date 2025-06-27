@@ -7,11 +7,14 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import ExportTeams from './pages/ExportTeams'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import ImportMode from './pages/ImportMode'
 
 library.add(fas)
 
 export const STEPS_LIST = {
   SETUP: 'setup',
+  IMPORT_MODE: 'import_mode',
+  FETCH_LISTS: 'fetch_lists',
   IMPORT_PLAYERS: 'import_players',
   PLAYERS_LIST: 'players_list',
   GENERATE_TEAMS: 'generate_teams',
@@ -61,12 +64,14 @@ const App = () => {
             {step === STEPS_LIST.SETUP && (
               <Setup handleStepChange={handleStepChange} setConfig={setConfig} />
             )}
+            {step === STEPS_LIST.IMPORT_MODE && (
+              <ImportMode handleStepChange={handleStepChange} setPlayers={setPlayers} />
+            )}
             {step === STEPS_LIST.IMPORT_PLAYERS && (
               <ImportPlayers
                 handleStepChange={handleStepChange}
                 players={players}
                 setPlayers={setPlayers}
-                config={config}
               />
             )}
             {step === STEPS_LIST.PLAYERS_LIST && (
@@ -92,7 +97,7 @@ const App = () => {
         </div>
       </main>
 
-      {step === 1 && (
+      {step === STEPS_LIST.SETUP && (
         <footer className="text-center text-muted bg-light py-2">
           <small>
             <a href="https://github.com/Sayannel" target="_blank" rel="noopener noreferrer">

@@ -9,7 +9,7 @@ const Setup = ({ handleStepChange, setConfig }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
     setConfig({ playersPerTeam })
-    handleStepChange(STEPS_LIST.IMPORT_PLAYERS)
+    handleStepChange(STEPS_LIST.IMPORT_MODE)
   }
 
   return (

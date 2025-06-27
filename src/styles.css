@@ -14,7 +14,7 @@ body {
 }
 
 #step1Setup {
-    min-height: calc(100vh - 170px);
+    min-height: calc(100vh - 140px);
 }
 
 button {
@@ -108,5 +108,13 @@ button {
         &.shadow-lg {
             box-shadow: none !important;
         }
+    }
+}
+
+.import-mode {
+
+    &:hover {
+        cursor: pointer;
+        background: #f5f5f5;
     }
 }

@@ -80,9 +80,8 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
 
       <div id="players-list" className="fixed-controls-content">
         {sortedPlayers.length === 0 && (
-          <div className="text-center my-5">
-            <FontAwesomeIcon icon="question" className="display-2" />
-            <br />
+          <div className="card text-center my-5 card-body">
+            <FontAwesomeIcon icon="question" className="display-2 text-red" />
             <div className="mt-3">
               <span className="display-4">Y a quelqu'un ?</span>
             </div>
@@ -203,7 +202,7 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
           <div className="col col-auto">
             <button
               className="btn btn-outline-red"
-              onClick={() => handleStepChange(STEPS_LIST.IMPORT_PLAYERS)}
+              onClick={() => handleStepChange(STEPS_LIST.SETUP)}
             >
               &lt; Retour
             </button>

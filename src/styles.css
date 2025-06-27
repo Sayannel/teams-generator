@@ -79,12 +79,14 @@ button {
 #players-list {
     margin-bottom: 200px;
 }
+
 #teams-list {
     margin-bottom: 120px;
 }
-.fixed-controls-content{
+
+.fixed-controls-content {
     @media all and (min-width: 768px) {
-        margin-bottom: 0;
+        margin-bottom: 0 !important;
     }
 }
 

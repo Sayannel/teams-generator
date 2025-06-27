@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useRef, useState } from 'react'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { STEPS_LIST } from '../App'
 
-const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
+const PlayersList = ({ handleStepChange, players, setPlayers }) => {
   const rowRefs = useRef({})
   const [highlightedIndex, setHighlightedIndex] = useState(null)
   const [newPlayer, setNewPlayer] = useState({
@@ -200,7 +201,10 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
 
         <div className="row justify-content-between mt-4">
           <div className="col col-auto">
-            <button className="btn btn-outline-red" onClick={() => handleStepChange(2)}>
+            <button
+              className="btn btn-outline-red"
+              onClick={() => handleStepChange(STEPS_LIST.IMPORT_PLAYERS)}
+            >
               &lt; Retour
             </button>
           </div>
@@ -210,7 +214,7 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
               className="btn btn-red"
               onClick={() => {
                 if (players.length > 0) {
-                  handleStepChange(4)
+                  handleStepChange(STEPS_LIST.GENERATE_TEAMS)
                 } else {
                   alert('La liste est vide. Veuillez saisir au moins un·e joueur·euse.')
                 }
@@ -227,4 +231,4 @@ const Step3PlayerList = ({ handleStepChange, players, setPlayers }) => {
   )
 }
 
-export default Step3PlayerList
+export default PlayersList

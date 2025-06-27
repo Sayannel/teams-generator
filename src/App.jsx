@@ -1,17 +1,25 @@
 import React, { useEffect, useState } from 'react'
-import Step1Setup from './components/Step1Setup'
-import Step2Import from './components/Step2Import'
-import Step3PlayerList from './components/Step3PlayerList'
-import Step4Generate from './components/Step4Generate'
-
+import Setup from './pages/Setup'
+import ImportPlayers from './pages/ImportPlayers'
+import PlayersList from './pages/PlayersList'
+import GenerateTeams from './pages/GenerateTeams'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
-import Step5Export from './components/Step5Export'
+import ExportTeams from './pages/ExportTeams'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
 library.add(fas)
 
+export const STEPS_LIST = {
+  SETUP: 'setup',
+  IMPORT_PLAYERS: 'import_players',
+  PLAYERS_LIST: 'players_list',
+  GENERATE_TEAMS: 'generate_teams',
+  EXPORT_TEAMS: 'export_teams',
+}
+
 const App = () => {
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(STEPS_LIST.SETUP)
   const [config, setConfig] = useState({ playersPerTeam: 0 })
   const [players, setPlayers] = useState([])
   const [teams, setTeams] = useState([])
@@ -23,7 +31,7 @@ const App = () => {
   }, [step])
 
   const reset = () => {
-    setStep(1)
+    setStep(STEPS_LIST.SETUP)
     setConfig({ playersPerTeam: 0 })
     setPlayers([])
     setTeams([])
@@ -50,24 +58,26 @@ const App = () => {
       <main id="main" className="container py-3">
         <div className="row justify-content-center">
           <div className="col col-12 col-md-8">
-            {step === 1 && <Step1Setup handleStepChange={handleStepChange} setConfig={setConfig} />}
-            {step === 2 && (
-              <Step2Import
+            {step === STEPS_LIST.SETUP && (
+              <Setup handleStepChange={handleStepChange} setConfig={setConfig} />
+            )}
+            {step === STEPS_LIST.IMPORT_PLAYERS && (
+              <ImportPlayers
                 handleStepChange={handleStepChange}
                 players={players}
                 setPlayers={setPlayers}
                 config={config}
               />
             )}
-            {step === 3 && (
-              <Step3PlayerList
+            {step === STEPS_LIST.PLAYERS_LIST && (
+              <PlayersList
                 handleStepChange={handleStepChange}
                 players={players}
                 setPlayers={setPlayers}
               />
             )}
-            {step === 4 && (
-              <Step4Generate
+            {step === STEPS_LIST.GENERATE_TEAMS && (
+              <GenerateTeams
                 handleStepChange={handleStepChange}
                 players={players}
                 config={config}
@@ -75,8 +85,8 @@ const App = () => {
                 teams={teams}
               />
             )}
-            {step === 5 && (
-              <Step5Export teams={teams} handleStepChange={handleStepChange} reset={reset} />
+            {step === STEPS_LIST.EXPORT_TEAMS && (
+              <ExportTeams teams={teams} handleStepChange={handleStepChange} reset={reset} />
             )}
           </div>
         </div>

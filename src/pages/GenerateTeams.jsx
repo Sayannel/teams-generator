@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import PlayerSkillSummary from './PlayerSkillSummary'
-import TeamSummary from './TeamSummary'
+import PlayerSkillSummary from './../components/PlayerSkillSummary'
+import TeamSummary from './../components/TeamSummary'
+import { STEPS_LIST } from '../App'
 
-const Step4Generate = ({ handleStepChange, players, config, teams, setTeams }) => {
+const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) => {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [balanceScore, setBalanceScore] = useState(null)
   const [genderParityScore, setGenderParityScore] = useState(null)
@@ -245,12 +245,18 @@ const Step4Generate = ({ handleStepChange, players, config, teams, setTeams }) =
 
         <div className="row justify-content-between">
           <div className="col col-auto">
-            <button className="btn btn-outline-red" onClick={() => handleStepChange(3)}>
+            <button
+              className="btn btn-outline-red"
+              onClick={() => handleStepChange(STEPS_LIST.PLAYERS_LIST)}
+            >
               &lt; Retour
             </button>
           </div>
           <div className="col col-auto">
-            <button className="btn btn-red" onClick={() => handleStepChange(5)}>
+            <button
+              className="btn btn-red"
+              onClick={() => handleStepChange(STEPS_LIST.EXPORT_TEAMS)}
+            >
               Valider les équipes &gt;
             </button>
           </div>
@@ -260,4 +266,4 @@ const Step4Generate = ({ handleStepChange, players, config, teams, setTeams }) =
   )
 }
 
-export default Step4Generate
+export default GenerateTeams

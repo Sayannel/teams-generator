@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
+import { STEPS_LIST } from '../App'
 
-const Step2Import = ({ handleStepChange, players, setPlayers }) => {
+const ImportPlayers = ({ handleStepChange, players, setPlayers }) => {
   const [inputText, setInputText] = useState('')
 
   const parseLine = (line, lineIndex, errors) => {
@@ -69,7 +70,7 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
 
     setPlayers([...players, ...newPlayers])
     setInputText('')
-    handleStepChange(3)
+    handleStepChange(STEPS_LIST.PLAYERS_LIST)
   }
 
   return (
@@ -79,7 +80,10 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
       {players.length > 0 && (
         <div className="alert alert-light fw-bold">
           Vous avez déjà ajouté {players.length} joueur·euse·s{' '}
-          <button className="btn btn-link text-red p-0" onClick={() => handleStepChange(3)}>
+          <button
+            className="btn btn-link text-red p-0"
+            onClick={() => handleStepChange(STEPS_LIST.PLAYERS_LIST)}
+          >
             Aller directement à la liste de joueur·euse·s
           </button>
         </div>
@@ -111,13 +115,19 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
 
         <div className="row justify-content-between ">
           <div className="col col-auto">
-            <button className="btn btn-outline-red" onClick={() => handleStepChange(1)}>
+            <button
+              className="btn btn-outline-red"
+              onClick={() => handleStepChange(STEPS_LIST.SETUP)}
+            >
               &lt; Retour
             </button>
           </div>
 
           <div className="col col-auto">
-            <button className="btn btn-red" onClick={() => handleStepChange(3)}>
+            <button
+              className="btn btn-red"
+              onClick={() => handleStepChange(STEPS_LIST.PLAYERS_LIST)}
+            >
               Passer l'import &gt;
             </button>
           </div>
@@ -127,4 +137,4 @@ const Step2Import = ({ handleStepChange, players, setPlayers }) => {
   )
 }
 
-export default Step2Import
+export default ImportPlayers

@@ -1,6 +1,6 @@
 import React from 'react'
 
-const Step5Export = ({ teams, reset }) => {
+const ExportTeams = ({ teams, reset }) => {
   // Mélange les prénoms dans chaque équipe (affichage aléatoire)
   const shuffledTeams = teams.map((team) => [...team].sort(() => Math.random() - 0.5))
 
@@ -57,4 +57,4 @@ const Step5Export = ({ teams, reset }) => {
   )
 }
 
-export default Step5Export
+export default ExportTeams

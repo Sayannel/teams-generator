@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
+import { STEPS_LIST } from '../App'
 
-const Step1Setup = ({ handleStepChange, setConfig }) => {
+const Setup = ({ handleStepChange, setConfig }) => {
   const [playersPerTeam, setPlayersPerTeam] = useState(4)
 
   const [isCollapseOpen, setIsCollapseOpen] = useState(false)
@@ -8,7 +9,7 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
     setConfig({ playersPerTeam })
-    handleStepChange(2)
+    handleStepChange(STEPS_LIST.IMPORT_PLAYERS)
   }
 
   return (
@@ -77,4 +78,4 @@ const Step1Setup = ({ handleStepChange, setConfig }) => {
   )
 }
 
-export default Step1Setup
+export default Setup

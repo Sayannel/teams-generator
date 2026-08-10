@@ -1,120 +1,44 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Crimson & Charcoal — brand scale, shifted one step lighter in dark mode below */
+  --color-brand-50: #fff1f2;
+  --color-brand-100: #ffe4e6;
+  --color-brand-400: #fb7185;
+  --color-brand-500: #e11d48;
+  --color-brand-600: #be123c;
+  --color-brand-700: #9f1239;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Same roles, one shade lighter so buttons/header keep enough contrast on dark surfaces */
+    --color-brand-500: #fb7185;
+    --color-brand-600: #e11d48;
+    --color-brand-700: #be123c;
+  }
+}
+
 body {
-    font-family: 'Roboto', sans-serif;
-    margin: 0;
-    background: #f5f5f5;
+  margin: 0;
+  background: #f8fafc;
 }
 
-.container {
-    padding: 2rem;
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0b0d10;
+  }
 }
 
-#app-title {
-    font-size: 1.25rem;
-    font-weight: bold;
+@keyframes drawer-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
-#step1Setup {
-    min-height: calc(100vh - 140px);
-}
-
-button {
-    margin: 0.5rem;
-}
-
-.bg-red {
-    background-color: #e43425;
-}
-
-.text-red {
-    color: #e43425 !important;
-}
-
-.btn.btn-red {
-    background-color: #e43425 !important;
-    border-color: #e43425 !important;
-    color: #fff !important;
-}
-
-.btn.btn-red:hover,
-.btn.btn-red:focus,
-.btn.btn-red:active {
-    background-color: #c52d1f !important;
-    border-color: #c52d1f !important;
-    color: #fff !important;
-}
-
-.btn.btn-red:disabled,
-.btn.btn-red.disabled {
-    background-color: #e43425 !important;
-    border-color: #e43425 !important;
-    opacity: 0.65 !important;
-}
-
-.btn.btn-outline-red {
-    color: #e43425 !important;
-    background-color: transparent !important;
-    border-color: #e43425 !important;
-}
-
-.btn.btn-outline-red:hover,
-.btn.btn-outline-red:focus,
-.btn.btn-outline-red:active {
-    color: #fff !important;
-    background-color: #e43425 !important;
-    border-color: #e43425 !important;
-}
-
-.btn.btn-outline-red:disabled,
-.btn.btn-outline-red.disabled {
-    color: #e43425 !important;
-    background-color: transparent !important;
-    opacity: 0.65 !important;
-}
-
-.bg-warning-subtle {
-    background-color: #fff3cd !important;
-    transition: background-color 0.3s ease;
-}
-
-#players-list {
-    margin-bottom: 200px;
-}
-
-#teams-list {
-    margin-bottom: 120px;
-}
-
-.fixed-controls-content {
-    @media all and (min-width: 768px) {
-        margin-bottom: 0 !important;
-    }
-}
-
-.fixed-controls {
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-    left: 0;
-    background: #fff;
-    border-top: 1px solid #ccc;
-    z-index: 10;
-    @media all and (min-width: 768px) {
-        position: relative;
-        width: unset;
-        bottom: unset;
-        left: unset;
-        background: none;
-        border-top: none;
-        &.shadow-lg {
-            box-shadow: none !important;
-        }
-    }
-}
-
-.import-mode {
-
-    &:hover {
-        cursor: pointer;
-        background: #f5f5f5;
-    }
+.animate-drawer-slide-up {
+  animation: drawer-slide-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
 }

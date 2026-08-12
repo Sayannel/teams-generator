@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Users, UsersRound, Volleyball } from 'lucide-react'
+import { Settings, Users, UsersRound, Volleyball } from 'lucide-react'
 import Setup from './pages/Setup'
 import PlayersList from './pages/PlayersList'
 import GenerateTeams from './pages/GenerateTeams'
 import ExportTeams from './pages/ExportTeams'
 import StepProgress from './components/ui/StepProgress'
 import ConfirmDialog from './components/ui/ConfirmDialog'
+import Drawer from './components/ui/Drawer'
+import ThemeToggle from './components/ui/ThemeToggle'
+import { useThemePreference } from './lib/useThemePreference'
 
 export const STEPS_LIST = {
   SETUP: 'setup',
@@ -28,6 +31,8 @@ const App = () => {
   const [players, setPlayers] = useState([])
   const [teams, setTeams] = useState([])
   const [isHomeConfirmOpen, setIsHomeConfirmOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [themePreference, setThemePreference] = useThemePreference()
 
   const handleStepChange = (n) => setStep(n)
 
@@ -62,18 +67,29 @@ const App = () => {
                 Générateur d'équipes
               </button>
             </h1>
-            <div className="flex items-center divide-x divide-white/40 rounded-lg border border-white/40 font-bold">
-              {config.playersPerTeam > 0 && (
+            {step === STEPS_LIST.SETUP ? (
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                aria-label="Réglages"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/40 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                <Settings className="size-5" />
+              </button>
+            ) : (
+              <div className="flex items-center divide-x divide-white/40 rounded-lg border border-white/40 font-bold">
+                {config.playersPerTeam > 0 && (
+                  <div className="flex items-center gap-1 px-3 py-1">
+                    {config.playersPerTeam}
+                    <UsersRound className="size-4" />
+                  </div>
+                )}
                 <div className="flex items-center gap-1 px-3 py-1">
-                  {config.playersPerTeam}
-                  <UsersRound className="size-4" />
+                  {players.length}
+                  <Users className="size-4" />
                 </div>
-              )}
-              <div className="flex items-center gap-1 px-3 py-1">
-                {players.length}
-                <Users className="size-4" />
               </div>
-            </div>
+            )}
           </div>
           <div className="mt-2">
             <StepProgress current={STEP_NUMBERS[step]} total={TOTAL_STEPS} />
@@ -127,6 +143,13 @@ const App = () => {
         onConfirm={confirmGoHome}
         onCancel={() => setIsHomeConfirmOpen(false)}
       />
+
+      <Drawer open={isSettingsOpen} title="Réglages" onClose={() => setIsSettingsOpen(false)}>
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Thème</p>
+          <ThemeToggle preference={themePreference} onChange={setThemePreference} />
+        </div>
+      </Drawer>
     </div>
   )
 }

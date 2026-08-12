@@ -1,22 +1,25 @@
 @import 'tailwindcss';
 
+/* `dark:` utilities key off data-theme (set by the settings toggle, defaulting to
+   the OS preference on first load — see src/lib/theme.js) instead of the raw
+   prefers-color-scheme media query, so the manual override actually takes effect. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
-  /* Crimson & Charcoal — brand scale, shifted one step lighter in dark mode below */
-  --color-brand-50: #fff1f2;
-  --color-brand-100: #ffe4e6;
-  --color-brand-400: #fb7185;
-  --color-brand-500: #e11d48;
-  --color-brand-600: #be123c;
-  --color-brand-700: #9f1239;
+  /* Étoile Vive — the ball's red, unretouched; shifted one step lighter in dark mode below */
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fee2e2;
+  --color-brand-400: #f87171;
+  --color-brand-500: #ef2323;
+  --color-brand-600: #da0a0a;
+  --color-brand-700: #b90c11;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Same roles, one shade lighter so buttons/header keep enough contrast on dark surfaces */
-    --color-brand-500: #fb7185;
-    --color-brand-600: #e11d48;
-    --color-brand-700: #be123c;
-  }
+:root[data-theme='dark'] {
+  /* Same roles, one shade lighter so buttons/header keep enough contrast on dark surfaces */
+  --color-brand-500: #ff8181;
+  --color-brand-600: #ef2323;
+  --color-brand-700: #da0a0a;
 }
 
 body {
@@ -24,10 +27,8 @@ body {
   background: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #0b0d10;
-  }
+:root[data-theme='dark'] body {
+  background: #0b0d10;
 }
 
 @keyframes drawer-slide-up {

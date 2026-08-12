@@ -1,6 +1,6 @@
-const LEVEL_RAMP_START = [253, 164, 175] // rose-300
-const LEVEL_RAMP_END = [76, 5, 25] // rose-950
-const LEVEL_RAMP_MID = 'rgb(190, 18, 60)' // rose-700 (brand-600), used when only one level exists
+const LEVEL_RAMP_START = [253, 165, 165] // light tint of brand-600
+const LEVEL_RAMP_END = [77, 5, 5] // deep shade of brand-600
+const LEVEL_RAMP_MID = 'rgb(218, 10, 10)' // brand-600 (Étoile Vive), used when only one level exists
 
 export function getLevelColor(index, count) {
   if (count <= 1) return LEVEL_RAMP_MID

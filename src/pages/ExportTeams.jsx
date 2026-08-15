@@ -1,19 +1,25 @@
 import { useState } from 'react'
-import Button from '../components/ui/Button'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
+import { alpha, useTheme } from '@mui/material/styles'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
-import { Toast } from '../components/ui/Toast'
-import { useToast } from '../components/ui/useToast'
+import { useToast } from '../components/ui/ToastProvider'
 import { getTeamColor } from '../lib/teamColors'
 
 const ExportTeams = ({ teams, reset }) => {
+  const theme = useTheme()
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
-  const { toast, showToast, hideToast } = useToast()
+  const { showToast } = useToast()
 
-  // Mélange les prénoms dans chaque équipe (affichage aléatoire)
-  const shuffledTeams = teams.map((team) => [...team].sort(() => Math.random() - 0.5))
+  // Trie les prénoms par ordre alphabétique dans chaque équipe (affichage stable)
+  const sortedTeams = teams.map((team) => [...team].sort((a, b) => a.name.localeCompare(b.name)))
 
   const copyToClipboard = () => {
-    const text = shuffledTeams
+    const text = sortedTeams
       .map((team, i) => `Équipe #${i + 1} : ${team.map((p) => p.name).join(', ')}`)
       .join('\n')
 
@@ -23,42 +29,66 @@ const ExportTeams = ({ teams, reset }) => {
   }
 
   return (
-    <div>
-      <h2 className="mb-4 text-xl font-bold text-slate-900 dark:text-slate-100">
+    <Box>
+      <Typography variant="h5" sx={{ mb: 2 }}>
         Export des équipes
-      </h2>
+      </Typography>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-        {shuffledTeams.map((team, i) => {
-          const color = getTeamColor(i)
+      <Grid container spacing={1.5}>
+        {sortedTeams.map((team, i) => {
+          const main = getTeamColor(i)
+          const tint = alpha(main, theme.palette.mode === 'dark' ? 0.16 : 0.08)
           return (
-            <div
-              key={i}
-              className={`overflow-hidden rounded-xl border bg-white shadow-sm dark:bg-slate-900 ${color.border}`}
-            >
-              <div
-                className={`border-b px-4 py-3 font-bold text-slate-900 dark:text-slate-100 ${color.border} ${color.header}`}
-              >
-                Équipe #{i + 1}
-              </div>
-              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                {team.map((p) => (
-                  <li key={p.id} className="px-4 py-2 text-slate-700 dark:text-slate-300">
-                    {p.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Grid key={i} size={{ xs: 6, md: 6, lg: 6 }}>
+              <Card variant="outlined" sx={{ borderColor: alpha(main, 0.35) }}>
+                <Typography
+                  fontWeight={700}
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    borderBottom: 1,
+                    borderColor: alpha(main, 0.35),
+                    bgcolor: tint,
+                  }}
+                >
+                  Équipe #{i + 1}
+                </Typography>
+                <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
+                  {team.map((p) => (
+                    <Box
+                      component="li"
+                      key={p.id}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        color: 'text.secondary',
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        '&:last-of-type': { borderBottom: 0 },
+                      }}
+                    >
+                      {p.name}
+                    </Box>
+                  ))}
+                </Box>
+              </Card>
+            </Grid>
           )
         })}
-      </div>
+      </Grid>
 
-      <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
-        <Button variant="outline" onClick={copyToClipboard}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1.5}
+        sx={{ mt: 3, justifyContent: 'flex-end' }}
+      >
+        <Button variant="outlined" onClick={copyToClipboard}>
           Copier les équipes
         </Button>
-        <Button onClick={() => setIsResetConfirmOpen(true)}>Faire de nouvelles équipes</Button>
-      </div>
+        <Button variant="contained" onClick={() => setIsResetConfirmOpen(true)}>
+          Faire de nouvelles équipes
+        </Button>
+      </Stack>
 
       <ConfirmDialog
         open={isResetConfirmOpen}
@@ -71,9 +101,7 @@ const ExportTeams = ({ teams, reset }) => {
         }}
         onCancel={() => setIsResetConfirmOpen(false)}
       />
-
-      <Toast toast={toast} onDismiss={hideToast} />
-    </div>
+    </Box>
   )
 }
 

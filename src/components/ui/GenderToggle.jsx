@@ -1,3 +1,5 @@
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import { Mars, Venus } from 'lucide-react'
 
 const OPTIONS = [
@@ -6,31 +8,35 @@ const OPTIONS = [
 ]
 
 const GenderToggle = ({ gender, onChange }) => (
-  <div
-    className="inline-flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
-    role="group"
+  <ToggleButtonGroup
+    value={gender}
+    exclusive
+    onChange={(_, value) => value && onChange(value)}
     aria-label="Genre"
+    size="small"
+    color="primary"
   >
-    {OPTIONS.map(({ value, label, Icon }) => {
-      const isActive = gender === value
-      return (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onChange(value)}
-          aria-pressed={isActive}
-          className={`flex h-11 items-center gap-1.5 px-3 text-sm font-medium transition-colors ${
-            isActive
-              ? 'bg-brand-600 text-white'
-              : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-          }`}
-        >
-          <Icon className="size-4" />
-          {label}
-        </button>
-      )
-    })}
-  </div>
+    {OPTIONS.map(({ value, label, Icon }) => (
+      <ToggleButton
+        key={value}
+        value={value}
+        sx={{
+          gap: 0.75,
+          textTransform: 'none',
+          px: 1.5,
+          height: 44,
+          '&.Mui-selected': {
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            '&:hover': { bgcolor: 'primary.dark' },
+          },
+        }}
+      >
+        <Icon size={16} />
+        {label}
+      </ToggleButton>
+    ))}
+  </ToggleButtonGroup>
 )
 
 export default GenderToggle

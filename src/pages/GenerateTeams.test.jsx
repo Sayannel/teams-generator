@@ -3,17 +3,20 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import GenerateTeams from './GenerateTeams'
+import { ToastProvider } from '../components/ui/ToastProvider'
 
 function Wrapper({ players, config }) {
   const [teams, setTeams] = useState([])
   return (
-    <GenerateTeams
-      handleStepChange={() => {}}
-      players={players}
-      config={config}
-      teams={teams}
-      setTeams={setTeams}
-    />
+    <ToastProvider>
+      <GenerateTeams
+        handleStepChange={() => {}}
+        players={players}
+        config={config}
+        teams={teams}
+        setTeams={setTeams}
+      />
+    </ToastProvider>
   )
 }
 

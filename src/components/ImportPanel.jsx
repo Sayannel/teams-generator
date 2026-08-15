@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { parsePlayersFromText } from '../lib/playerImport'
-import Button from './ui/Button'
 
 const ImportPanel = ({ onImport, onClose }) => {
   const [inputText, setInputText] = useState('')
@@ -16,45 +20,71 @@ const ImportPanel = ({ onImport, onClose }) => {
   }
 
   return (
-    <div>
-      <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+    <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         <i>Le niveau 1 correspond aux débutant·e·s, il n'y a pas de niveau maximum.</i>
         <br />
         Une ligne par joueur·euse :{' '}
-        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">Nom</code>,{' '}
-        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">genre (m/f)</code>,{' '}
-        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">niveau</code>
-      </p>
+        <Box component="code" sx={{ borderRadius: 0.5, bgcolor: 'action.hover', px: 0.5 }}>
+          Nom
+        </Box>
+        ,{' '}
+        <Box component="code" sx={{ borderRadius: 0.5, bgcolor: 'action.hover', px: 0.5 }}>
+          genre (m/f)
+        </Box>
+        ,{' '}
+        <Box component="code" sx={{ borderRadius: 0.5, bgcolor: 'action.hover', px: 0.5 }}>
+          niveau
+        </Box>
+      </Typography>
 
-      <textarea
-        rows="6"
+      <TextField
+        multiline
+        rows={6}
         autoFocus
         placeholder={'Axel G, 4, m\nAxel G, 4\nAxel G, m'}
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        className="mb-3 w-full rounded-lg border border-slate-300 bg-white p-3 text-left text-slate-900 focus:border-brand-600 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        fullWidth
+        sx={{ mb: 1.5 }}
       />
 
       {errors.length > 0 && (
-        <div className="mb-3 rounded-lg bg-red-50 p-3 text-left text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          <p className="mb-1 font-semibold">Lignes ignorées :</p>
-          <ul className="list-disc pl-5">
+        <Box
+          sx={{
+            mb: 1.5,
+            borderRadius: 2,
+            bgcolor: 'error.main',
+            color: 'error.contrastText',
+            p: 1.5,
+            opacity: 0.9,
+          }}
+        >
+          <Typography variant="body2" fontWeight={600}>
+            Lignes ignorées :
+          </Typography>
+          <Box component="ul" sx={{ pl: 2.5, m: 0 }}>
             {errors.map((error) => (
               <li key={error}>{error}</li>
             ))}
-          </ul>
-        </div>
+          </Box>
+        </Box>
       )}
 
-      <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={onClose}>
+      <Stack direction="row" spacing={1}>
+        <Button variant="outlined" fullWidth onClick={onClose}>
           Annuler
         </Button>
-        <Button className="flex-1" onClick={handleImport} disabled={parsedPlayers.length === 0}>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={handleImport}
+          disabled={parsedPlayers.length === 0}
+        >
           Importer {parsedPlayers.length > 0 && `(${parsedPlayers.length})`}
         </Button>
-      </div>
-    </div>
+      </Stack>
+    </Box>
   )
 }
 

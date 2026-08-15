@@ -58,7 +58,7 @@ describe('generateTeams', () => {
     const players = makePlayers(20, { skill: 5 })
     const { score } = generateTeams(players, 5)
     expect(score.gap).toBe(0)
-    expect(score.label).toBe('Parfaitement équilibré')
+    expect(score.label).toBe('Bon')
   })
 
   it('keeps gender counts per team within an acceptable band', () => {
@@ -149,8 +149,8 @@ describe('evaluateBalanceScore', () => {
 
   it('labels boundary skill gaps correctly', () => {
     const teamsWithGap = (gap) => [[{ skill: 0 }], [{ skill: gap }]]
-    expect(evaluateBalanceScore(teamsWithGap(2)).label).toBe('Très équilibré')
-    expect(evaluateBalanceScore(teamsWithGap(3)).label).toBe('Moyennement équilibré')
+    expect(evaluateBalanceScore(teamsWithGap(2)).label).toBe('Correct')
+    expect(evaluateBalanceScore(teamsWithGap(3)).label).toBe('Moyen')
     expect(evaluateBalanceScore(teamsWithGap(5)).label).toBe('Déséquilibré')
   })
 })
@@ -168,7 +168,7 @@ describe('evaluateGenderParity', () => {
   it('is unaffected by a single-gender roster (nothing to mix)', () => {
     const teams = [[{ gender: 'male' }, { gender: 'male' }], [{ gender: 'male' }]]
     expect(evaluateGenderParity(teams)).toMatchObject({
-      label: 'Parité parfaite',
+      label: 'Bonne',
       status: 'success',
     })
   })
@@ -182,10 +182,10 @@ describe('evaluateGenderParity', () => {
           : [{ gender: 'male' }, { gender: 'female' }]
       )
 
-    expect(evaluateGenderParity(teamsWithZeroMinorityCount(0)).label).toBe('Parité parfaite')
-    expect(evaluateGenderParity(teamsWithZeroMinorityCount(1)).label).toBe('Bonne parité')
-    expect(evaluateGenderParity(teamsWithZeroMinorityCount(2)).label).toBe('Parité moyenne')
-    expect(evaluateGenderParity(teamsWithZeroMinorityCount(3)).label).toBe('Parité déséquilibrée')
+    expect(evaluateGenderParity(teamsWithZeroMinorityCount(0)).label).toBe('Bonne')
+    expect(evaluateGenderParity(teamsWithZeroMinorityCount(1)).label).toBe('Correcte')
+    expect(evaluateGenderParity(teamsWithZeroMinorityCount(2)).label).toBe('Moyenne')
+    expect(evaluateGenderParity(teamsWithZeroMinorityCount(3)).label).toBe('Déséquilibrée')
   })
 
   it('catches the "spread evenly by head-count but several teams have zero" case', () => {

@@ -1,4 +1,9 @@
-import Button from './Button'
+import Button from '@mui/material/Button'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 
 const ConfirmDialog = ({
   open,
@@ -8,32 +13,21 @@ const ConfirmDialog = ({
   cancelLabel = 'Annuler',
   onConfirm,
   onCancel,
-}) => {
-  if (!open) return null
-
-  return (
-    <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-900">
-        {title && (
-          <h3 className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-        )}
-        <p className="mb-5 text-slate-600 dark:text-slate-400">{message}</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-          <Button variant="solid" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+}) => (
+  <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth aria-label={title}>
+    {title && <DialogTitle sx={{ fontWeight: 700 }}>{title}</DialogTitle>}
+    <DialogContent>
+      <DialogContentText>{message}</DialogContentText>
+    </DialogContent>
+    <DialogActions sx={{ px: 3, pb: 2.5 }}>
+      <Button variant="outlined" onClick={onCancel}>
+        {cancelLabel}
+      </Button>
+      <Button variant="contained" onClick={onConfirm}>
+        {confirmLabel}
+      </Button>
+    </DialogActions>
+  </Dialog>
+)
 
 export default ConfirmDialog

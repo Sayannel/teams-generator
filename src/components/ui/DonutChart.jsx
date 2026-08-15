@@ -1,17 +1,22 @@
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import { useTheme } from '@mui/material/styles'
+
 const RADIUS = 15.9155 // makes the circle's circumference ~100, so segment values map directly to percentages
 
 const DonutChart = ({ segments, size = 128, strokeWidth = 5, centerLabel, centerSublabel }) => {
+  const theme = useTheme()
   let cumulative = 0
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 42 42" className="size-full">
+    <Box sx={{ position: 'relative', flexShrink: 0, width: size, height: size }}>
+      <svg viewBox="0 0 42 42" width="100%" height="100%">
         <circle
           cx="21"
           cy="21"
           r={RADIUS}
           fill="none"
-          className="stroke-slate-100 dark:stroke-slate-700"
+          stroke={theme.palette.divider}
           strokeWidth={strokeWidth}
         />
         {segments.map((segment) => {
@@ -34,20 +39,29 @@ const DonutChart = ({ segments, size = 128, strokeWidth = 5, centerLabel, center
         })}
       </svg>
       {(centerLabel || centerSublabel) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {centerLabel && (
-            <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+            <Typography variant="h6" fontWeight={800} color="text.primary">
               {centerLabel}
-            </span>
+            </Typography>
           )}
           {centerSublabel && (
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <Typography variant="caption" color="text.disabled">
               {centerSublabel}
-            </span>
+            </Typography>
           )}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   )
 }
 

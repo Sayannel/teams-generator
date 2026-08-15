@@ -1,10 +1,8 @@
-// Edge alignment for elements fixed to the viewport that should stay flush
-// with the app's centered max-w-2xl column instead of the raw viewport edge
-// on wide screens. The column is centered, so the same offset formula works
-// mirrored on both sides.
-export const FLOATING_RIGHT_CLASS = 'right-[max(1rem,calc(50vw-20rem))]'
-
-// Rendered height of App.jsx's sticky header (title row + progress bar).
-// Anything else that sticks to the top of the viewport (e.g. a table header)
-// must offset by this amount instead of top-0, or the two would overlap.
-export const APP_HEADER_HEIGHT = '4.25rem'
+// The app's sticky header (title row + progress bar) has a height that
+// varies by breakpoint and content, so App.jsx measures it live with a
+// ResizeObserver and exposes it as this CSS custom property. Anything else
+// that sticks to the top of the viewport (e.g. a table header) should offset
+// by `var(${APP_HEADER_HEIGHT_VAR})` instead of a hardcoded top, or the two
+// would overlap.
+export const APP_HEADER_HEIGHT_VAR = '--app-header-height'
+export const APP_HEADER_HEIGHT_CSS = `var(${APP_HEADER_HEIGHT_VAR}, 4.5rem)`

@@ -1,57 +1,124 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRight, ClipboardPaste, Mars, Plus, Trash2, UserPlus, Venus } from 'lucide-react'
+import {
+  ChevronRight,
+  ClipboardPaste,
+  Download,
+  Mars,
+  Plus,
+  Trash2,
+  UserPlus,
+  Venus,
+} from 'lucide-react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableFooter from '@mui/material/TableFooter'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import { alpha, useTheme } from '@mui/material/styles'
 import { STEPS_LIST } from '../App'
-import Button from '../components/ui/Button'
+import { api } from '../lib/api'
+import { computeListDiff, isDiffEmpty, applyListDiff } from '../lib/listSync'
 import BottomActionBar from '../components/ui/BottomActionBar'
 import NumberStepper from '../components/ui/NumberStepper'
 import GenderToggle from '../components/ui/GenderToggle'
 import Drawer from '../components/ui/Drawer'
 import Fab from '../components/ui/Fab'
 import ImportPanel from '../components/ImportPanel'
-import { Toast } from '../components/ui/Toast'
-import { useToast } from '../components/ui/useToast'
+import ImportSavedListPanel from '../components/ImportSavedListPanel'
+import { useToast } from '../components/ui/ToastProvider'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
-import { APP_HEADER_HEIGHT } from '../lib/layout'
+import { APP_HEADER_HEIGHT_CSS } from '../lib/layout'
+import { useIsDesktop } from '../lib/useIsDesktop'
 
-const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'
+const emptyNewPlayer = { name: '', skill: 1, gender: 'male' }
 
-// Reads the `md` breakpoint once and keeps it in sync via matchMedia.
-// jsdom (used by tests) has no matchMedia implementation, so this safely
-// falls back to "mobile" there, matching the app's mobile-first behavior.
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-    return window.matchMedia(DESKTOP_MEDIA_QUERY).matches
-  })
+// A player's `id` is a number when it came from the server (a loaded
+// roster row) — mirrors the same discriminator in lib/listSync.js.
+const hasServerId = (player) => typeof player.id === 'number'
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
-    const mql = window.matchMedia(DESKTOP_MEDIA_QUERY)
-    const handleChange = (e) => setIsDesktop(e.matches)
-    mql.addEventListener('change', handleChange)
-    return () => mql.removeEventListener('change', handleChange)
-  }, [])
+const GuestChip = () => (
+  <Chip
+    label="invité·e"
+    size="small"
+    color="warning"
+    sx={{
+      height: 18,
+      fontSize: '0.625rem',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      flexShrink: 0,
+    }}
+  />
+)
 
-  return isDesktop
-}
-
-const PlayersList = ({ handleStepChange, players, setPlayers }) => {
+const PlayersList = ({
+  handleStepChange,
+  players,
+  setPlayers,
+  currentList = null,
+  savedRoster = [],
+  setSavedRoster,
+  user = null,
+}) => {
+  const theme = useTheme()
   const nameInputRef = useRef(null)
-  const [newPlayer, setNewPlayer] = useState({ name: '', skill: 1, gender: 'male' })
+  const [newPlayer, setNewPlayer] = useState(emptyNewPlayer)
+  const [selectedMatch, setSelectedMatch] = useState(null)
+  const [searchResults, setSearchResults] = useState([])
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isImportListOpen, setIsImportListOpen] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingPlayerId, setEditingPlayerId] = useState(null)
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false)
-  const { toast, showToast, hideToast } = useToast()
+  const [pendingDiff, setPendingDiff] = useState(null)
+  // Roster players explicitly removed from the working list this session
+  // (trash icon, or "Effacer la liste") — the only ones computeListDiff
+  // should delete server-side; simply being absent doesn't count.
+  const [removedRosterIds, setRemovedRosterIds] = useState(new Set())
+  const [isSaving, setIsSaving] = useState(false)
+  const { showToast } = useToast()
   const isDesktop = useIsDesktop()
 
-  const handleBulkImport = (importedPlayers) => {
+  // Debounced typeahead against the personal player directory, for pulling
+  // in someone who isn't already part of this session (the "Jane Doe" case).
+  useEffect(() => {
+    const query = newPlayer.name.trim()
+    if (selectedMatch || query.length < 2) {
+      setSearchResults([])
+      return undefined
+    }
+    const handle = setTimeout(() => {
+      api
+        .searchPlayers(query)
+        .then(({ players: found }) => {
+          setSearchResults(found.filter((p) => !players.some((existing) => existing.id === p.id)))
+        })
+        .catch(() => {})
+    }, 250)
+    return () => clearTimeout(handle)
+  }, [newPlayer.name, selectedMatch, players])
+
+  // Shared by both bulk-import paths (pasted text, or a whole saved list —
+  // already filtered to who's actually present, in the latter's own
+  // picker): merge in whoever isn't already here by name.
+  const mergeImportedPlayers = (importedPlayers) => {
     const existingNames = new Set(players.map((p) => p.name.toLowerCase()))
     const newPlayers = importedPlayers.filter((p) => !existingNames.has(p.name.toLowerCase()))
     const skipped = importedPlayers.length - newPlayers.length
 
     setPlayers((prev) => [...prev, ...newPlayers])
-    setIsImportOpen(false)
 
     if (skipped > 0) {
       showToast(
@@ -61,13 +128,43 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
     }
   }
 
+  const handleBulkImport = (importedPlayers) => {
+    mergeImportedPlayers(importedPlayers)
+    setIsImportOpen(false)
+  }
+
+  const handleImportFromList = (importedPlayers) => {
+    mergeImportedPlayers(importedPlayers)
+    setIsImportListOpen(false)
+  }
+
   const removePlayer = (id) => {
+    const removed = players.find((p) => p.id === id)
     setPlayers(players.filter((p) => p.id !== id))
+    if (removed && !removed.isAdHoc && hasServerId(removed)) {
+      setRemovedRosterIds((prev) => new Set(prev).add(removed.id))
+    }
+    if (removed) showToast(`${removed.name || 'Joueur·euse'} supprimé·e.`, 'success')
   }
 
   const confirmClearPlayers = () => {
+    setRemovedRosterIds((prev) => {
+      const next = new Set(prev)
+      players.forEach((p) => {
+        if (!p.isAdHoc && hasServerId(p)) next.add(p.id)
+      })
+      return next
+    })
     setPlayers([])
     setIsClearConfirmOpen(false)
+    showToast('Liste vidée.', 'success')
+  }
+
+  const closeAddDrawer = () => {
+    setIsAddOpen(false)
+    setNewPlayer((prev) => ({ ...emptyNewPlayer, skill: prev.skill, gender: prev.gender }))
+    setSelectedMatch(null)
+    setSearchResults([])
   }
 
   const handleAddNewPlayer = () => {
@@ -80,12 +177,37 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
       return
     }
 
-    const newId = crypto.randomUUID()
-    const playerToAdd = { id: newId, name, skill: newPlayer.skill, gender: newPlayer.gender }
+    let playerToAdd
+    if (selectedMatch && selectedMatch.name === name) {
+      const isUsual = savedRoster.some((p) => p.id === selectedMatch.id)
+      playerToAdd = {
+        id: selectedMatch.id,
+        name: selectedMatch.name,
+        skill: selectedMatch.skill,
+        gender: selectedMatch.gender,
+        ...(!isUsual && { isAdHoc: true }),
+      }
+    } else {
+      playerToAdd = {
+        id: crypto.randomUUID(),
+        name,
+        skill: newPlayer.skill,
+        gender: newPlayer.gender,
+      }
+    }
+
     setPlayers((prev) => [...prev, playerToAdd])
     // On garde le niveau/genre du dernier ajout : pratique pour saisir un groupe d'un coup.
-    setNewPlayer({ name: '', skill: newPlayer.skill, gender: newPlayer.gender })
+    setNewPlayer({ name: '', skill: playerToAdd.skill, gender: playerToAdd.gender })
+    setSelectedMatch(null)
+    setSearchResults([])
     nameInputRef.current?.focus()
+  }
+
+  const selectSearchResult = (match) => {
+    setSelectedMatch(match)
+    setNewPlayer({ name: match.name, skill: match.skill, gender: match.gender })
+    setSearchResults([])
   }
 
   const handleNameChange = (id, newName) => {
@@ -105,205 +227,410 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
   const canContinue = isValid && players.length > 0
   const editingPlayer = players.find((p) => p.id === editingPlayerId) ?? null
 
-  return (
-    <div className="pb-40 md:pb-24">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-          Liste des joueur·euse·s
-        </h2>
+  const goToGenerateTeams = () => handleStepChange(STEPS_LIST.GENERATE_TEAMS)
 
-        <div className="flex items-center gap-2">
+  const handleValider = () => {
+    if (!currentList) {
+      goToGenerateTeams()
+      return
+    }
+    const diff = computeListDiff(savedRoster, players, removedRosterIds)
+    if (isDiffEmpty(diff)) {
+      goToGenerateTeams()
+      return
+    }
+    setPendingDiff(diff)
+  }
+
+  // Folds a diff-apply's results back into local state: newly-created
+  // players get their server id (so a later sync recognizes them as already
+  // persisted instead of re-creating them), and `savedRoster` — the
+  // baseline the next computeListDiff compares against — is brought back in
+  // sync with what the server now actually holds.
+  const reconcileAppliedDiff = (progress) => {
+    setPlayers((prev) =>
+      prev.map((p) => {
+        const created = progress.created.get(p.id)
+        return created ? { ...p, id: created.id } : p
+      })
+    )
+    setSavedRoster((prev) => {
+      const updatedById = new Map(progress.updated.map((p) => [p.id, p]))
+      const kept = prev
+        .filter((p) => !progress.deletedIds.includes(p.id))
+        .map((p) => updatedById.get(p.id) ?? p)
+      return [...kept, ...progress.created.values()]
+    })
+    setRemovedRosterIds((prev) => {
+      const next = new Set(prev)
+      progress.deletedIds.forEach((id) => next.delete(id))
+      return next
+    })
+  }
+
+  const saveAndContinue = async () => {
+    setIsSaving(true)
+    try {
+      const progress = await applyListDiff(api, currentList.id, pendingDiff)
+      reconcileAppliedDiff(progress)
+      setPendingDiff(null)
+      goToGenerateTeams()
+    } catch (error) {
+      if (error.partialProgress) reconcileAppliedDiff(error.partialProgress)
+      showToast("Certaines modifications n'ont pas pu être enregistrées.", 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const continueWithoutSaving = () => {
+    setPendingDiff(null)
+    goToGenerateTeams()
+  }
+
+  const tableRadius = theme.shape.borderRadius / 2
+
+  const rowBorderSx = (index, isNewGroup) =>
+    index === 0
+      ? {}
+      : isNewGroup
+        ? { borderTop: '2px solid', borderTopColor: 'primary.main' }
+        : { borderTop: 1, borderTopColor: 'divider' }
+
+  return (
+    <Box sx={{ pb: { xs: 20, md: 12 } }}>
+      <Stack
+        direction="column"
+        spacing={1.5}
+        sx={{ mb: 2, alignItems: 'stretch', justifyContent: 'space-between' }}
+      >
+        <Typography variant="h5">Liste des joueur·euse·s</Typography>
+
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ minWidth: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}
+        >
           {players.length > 0 && (
             <Button
-              variant="danger"
+              variant="contained"
+              color="error"
+              size={isDesktop ? 'medium' : 'small'}
+              startIcon={<Trash2 size={16} />}
               onClick={() => setIsClearConfirmOpen(true)}
               aria-label="Effacer la liste"
+              sx={{
+                fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                minWidth: { xs: 44 },
+                '& .MuiButton-startIcon': { ml: { xs: 0, sm: -0.5 }, mr: { xs: 0, sm: 1 } },
+              }}
             >
-              <Trash2 className="size-4" />
-              <span className="hidden sm:inline">Effacer</span>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                Effacer
+              </Box>
             </Button>
           )}
           <Button
-            variant="outline"
+            variant="outlined"
+            size={isDesktop ? 'medium' : 'small'}
+            startIcon={<ClipboardPaste size={16} />}
             onClick={() => setIsImportOpen(true)}
-            aria-label="Coller une liste"
+            aria-label="Import manuel"
+            sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
           >
-            <ClipboardPaste className="size-4" />
-            <span className="hidden sm:inline">Coller une liste</span>
+            Import manuel
           </Button>
+          {user && (
+            <Button
+              variant="outlined"
+              size={isDesktop ? 'medium' : 'small'}
+              startIcon={<Download size={16} />}
+              onClick={() => setIsImportListOpen(true)}
+              aria-label="Importer une liste"
+              sx={{ fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+            >
+              Importer une liste
+            </Button>
+          )}
           {isDesktop && (
-            <Button onClick={() => setIsAddOpen(true)}>
-              <Plus className="size-4" />
+            <Button
+              variant="contained"
+              startIcon={<Plus size={16} />}
+              onClick={() => setIsAddOpen(true)}
+              sx={{ fontWeight: 700 }}
+            >
               Ajouter
             </Button>
           )}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {sortedPlayers.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <UserPlus className="mb-1 size-10 text-brand-600" />
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300">
+        <Card
+          variant="outlined"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 1,
+            py: 6,
+            textAlign: 'center',
+          }}
+        >
+          <UserPlus size={40} color={theme.palette.primary.main} style={{ marginBottom: 4 }} />
+          <Typography variant="h6" fontWeight={500} color="text.secondary">
             Aucun·e joueur·euse pour l'instant
-          </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500">
-            Utilisez le bouton + ou « Coller une liste » pour commencer.
-          </p>
-        </div>
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Utilisez le bouton + ou « Coller des joueur·euse·s » pour commencer.
+          </Typography>
+        </Card>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <table className="w-full border-separate border-spacing-0 text-left">
-            <thead>
-              <tr
-                className={`sticky top-[${APP_HEADER_HEIGHT}] z-10 bg-brand-600 text-xs font-semibold uppercase tracking-wide text-white`}
-              >
-                <th className="rounded-tl-lg px-3 py-2">Nom</th>
-                <th className="px-3 py-2 text-center">Niveau</th>
-                <th className="px-3 py-2 text-center">Genre</th>
-                <th className="rounded-tr-lg px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <Paper variant="outlined" sx={{ borderRadius: `${tableRadius}px` }}>
+          <Table size="small" sx={{ borderCollapse: 'separate' }}>
+            <TableHead>
+              <TableRow>
+                <TableCell
+                  sx={{
+                    position: 'sticky',
+                    top: APP_HEADER_HEIGHT_CSS,
+                    zIndex: 1,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    borderTopLeftRadius: tableRadius,
+                  }}
+                >
+                  Nom
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{
+                    position: 'sticky',
+                    top: APP_HEADER_HEIGHT_CSS,
+                    zIndex: 1,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Niveau
+                </TableCell>
+                <TableCell
+                  align="center"
+                  sx={{
+                    position: 'sticky',
+                    top: APP_HEADER_HEIGHT_CSS,
+                    zIndex: 1,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Genre
+                </TableCell>
+                <TableCell
+                  sx={{
+                    position: 'sticky',
+                    top: APP_HEADER_HEIGHT_CSS,
+                    zIndex: 1,
+                    bgcolor: 'primary.main',
+                    borderTopRightRadius: tableRadius,
+                  }}
+                />
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {sortedPlayers.map((player, index) => {
                 const previous = sortedPlayers[index - 1]
                 const isNewGroup = index > 0 && previous.skill !== player.skill
-                const isLast = index === sortedPlayers.length - 1
-                const rowBorder =
-                  index === 0
-                    ? ''
-                    : isNewGroup
-                      ? 'border-t-2 border-t-brand-600'
-                      : 'border-t border-t-slate-100 dark:border-t-slate-800'
+                const border = rowBorderSx(index, isNewGroup)
 
                 if (isDesktop) {
                   return (
-                    <tr key={player.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/70">
-                      <td
-                        className={`min-w-0 px-2 py-1.5 ${rowBorder} ${isLast ? 'rounded-bl-lg' : ''}`}
-                      >
-                        <input
-                          type="text"
-                          value={player.name}
-                          onChange={(e) => handleNameChange(player.id, e.target.value)}
-                          aria-label="Nom"
-                          className="w-full min-w-0 rounded-lg border border-transparent bg-transparent px-2 py-1.5 font-medium text-slate-900 hover:border-slate-200 focus:border-brand-600 focus:bg-white focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 dark:focus:bg-slate-800"
-                        />
-                      </td>
-                      <td className={`px-2 py-1.5 text-center ${rowBorder}`}>
-                        <input
+                    <TableRow key={player.id} hover>
+                      <TableCell sx={{ minWidth: 0, ...border }}>
+                        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                          <TextField
+                            variant="standard"
+                            value={player.name}
+                            onChange={(e) => handleNameChange(player.id, e.target.value)}
+                            aria-label="Nom"
+                            fullWidth
+                            slotProps={{
+                              input: { disableUnderline: true, sx: { fontWeight: 500 } },
+                            }}
+                          />
+                          {player.isAdHoc && <GuestChip />}
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="center" sx={border}>
+                        <TextField
                           type="number"
                           inputMode="numeric"
-                          min={1}
+                          variant="outlined"
+                          size="small"
                           value={player.skill}
                           onChange={(e) => {
                             const n = parseInt(e.target.value, 10)
                             if (!isNaN(n)) handleSkillChange(player.id, Math.max(1, n))
                           }}
                           aria-label={`Niveau de ${player.name || 'ce joueur·euse'}`}
-                          className="w-14 rounded-lg border border-slate-200 bg-white px-1 py-1.5 text-center font-semibold text-slate-700 focus:border-brand-600 focus:outline-none [appearance:textfield] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          sx={{ width: 64 }}
+                          slotProps={{ htmlInput: { min: 1, style: { textAlign: 'center' } } }}
                         />
-                      </td>
-                      <td className={`px-2 py-1.5 ${rowBorder}`}>
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
+                      </TableCell>
+                      <TableCell align="center" sx={border}>
+                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center' }}>
+                          <IconButton
+                            size="small"
                             onClick={() => handleGenderChange(player.id, 'male')}
                             aria-pressed={player.gender === 'male'}
                             aria-label="Masculin"
-                            className={`flex size-8 items-center justify-center rounded-md transition-colors ${
-                              player.gender === 'male'
-                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300'
-                                : 'text-slate-300 hover:bg-slate-100 dark:text-slate-600 dark:hover:bg-slate-700'
-                            }`}
+                            color={player.gender === 'male' ? 'info' : 'default'}
+                            sx={{
+                              bgcolor: player.gender === 'male' ? 'action.selected' : 'transparent',
+                            }}
                           >
-                            <Mars className="size-4" />
-                          </button>
-                          <button
-                            type="button"
+                            <Mars size={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
                             onClick={() => handleGenderChange(player.id, 'female')}
                             aria-pressed={player.gender === 'female'}
                             aria-label="Féminin"
-                            className={`flex size-8 items-center justify-center rounded-md transition-colors ${
-                              player.gender === 'female'
-                                ? 'bg-brand-100 text-brand-600 dark:bg-rose-950/40 dark:text-rose-300'
-                                : 'text-slate-300 hover:bg-slate-100 dark:text-slate-600 dark:hover:bg-slate-700'
-                            }`}
+                            color={player.gender === 'female' ? 'primary' : 'default'}
+                            sx={{
+                              bgcolor:
+                                player.gender === 'female' ? 'action.selected' : 'transparent',
+                            }}
                           >
-                            <Venus className="size-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td
-                        className={`px-2 py-1.5 text-right ${rowBorder} ${isLast ? 'rounded-br-lg' : ''}`}
-                      >
-                        <button
-                          type="button"
+                            <Venus size={16} />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="right" sx={border}>
+                        <IconButton
+                          size="small"
                           onClick={() => removePlayer(player.id)}
                           aria-label={`Supprimer ${player.name || 'ce joueur·euse'}`}
-                          className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-600 dark:text-slate-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                          sx={(t) => ({
+                            color: 'text.disabled',
+                            '&:hover': {
+                              color: 'error.main',
+                              bgcolor: alpha(t.palette.error.main, 0.1),
+                            },
+                          })}
                         >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </td>
-                    </tr>
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
                   )
                 }
 
                 return (
-                  <tr
+                  <TableRow
                     key={player.id}
+                    hover
+                    role="button"
                     tabIndex={0}
+                    aria-label={`Modifier ${player.name || 'ce joueur·euse'}`}
                     onClick={() => setEditingPlayerId(player.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') setEditingPlayerId(player.id)
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setEditingPlayerId(player.id)
+                      }
                     }}
-                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
+                    sx={{ cursor: 'pointer' }}
                   >
-                    <td
-                      className={`min-w-0 truncate px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100 ${rowBorder} ${
-                        isLast ? 'rounded-bl-lg' : ''
-                      }`}
-                    >
-                      {player.name}
-                    </td>
-                    <td
-                      className={`px-3 py-2.5 text-center font-semibold text-slate-700 dark:text-slate-300 ${rowBorder}`}
-                    >
+                    <TableCell sx={{ minWidth: 0, fontWeight: 500, py: 1.5, ...border }}>
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{ minWidth: 0, alignItems: 'center' }}
+                      >
+                        <Typography noWrap component="span" fontWeight={500}>
+                          {player.name}
+                        </Typography>
+                        {player.isAdHoc && <GuestChip />}
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, py: 1.5, ...border }}>
                       {player.skill}
-                    </td>
-                    <td className={`px-3 py-2.5 text-center ${rowBorder}`}>
-                      <span className="inline-flex items-center justify-center">
-                        {player.gender === 'female' ? (
-                          <Venus className="size-4 text-brand-600" />
-                        ) : (
-                          <Mars className="size-4 text-blue-500 dark:text-blue-400" />
-                        )}
-                      </span>
-                    </td>
-                    <td
-                      className={`px-3 py-2.5 text-right ${rowBorder} ${isLast ? 'rounded-br-lg' : ''}`}
-                    >
-                      <ChevronRight className="ml-auto size-4 text-slate-300 dark:text-slate-600" />
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell align="center" sx={{ py: 1.5, ...border }}>
+                      {player.gender === 'female' ? (
+                        <Venus size={16} color={theme.palette.primary.main} />
+                      ) : (
+                        <Mars size={16} color="#3b82f6" />
+                      )}
+                    </TableCell>
+                    <TableCell align="right" sx={{ py: 1.5, ...border }}>
+                      <ChevronRight
+                        size={16}
+                        color={theme.palette.text.disabled}
+                        style={{ marginLeft: 'auto' }}
+                      />
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  align="right"
+                  sx={{
+                    borderTop: 2,
+                    borderTopColor: 'divider',
+                    borderBottomLeftRadius: tableRadius,
+                    borderBottomRightRadius: tableRadius,
+                    bgcolor: 'action.hover',
+                    fontSize: '1rem',
+                    color: 'text.primary',
+                    py: 1.5,
+                  }}
+                >
+                  Nombre de joueur·euse·s :{' '}
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    {sortedPlayers.length}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </Paper>
       )}
 
       {!isDesktop && (
-        <Fab onClick={() => setIsAddOpen(true)} aria-label="Ajouter un·e joueur·euse">
-          <Plus className="size-6" />
+        <Fab
+          onClick={() => setIsAddOpen(true)}
+          aria-label="Ajouter un·e joueur·euse"
+          sx={{ fontWeight: 700 }}
+        >
+          <Plus size={20} />
+          Ajouter
         </Fab>
       )}
 
-      <BottomActionBar className="md:mt-4">
-        <div className="flex md:justify-end">
+      <BottomActionBar sx={{ mt: { md: 2 } }}>
+        <Box sx={{ display: 'flex', justifyContent: { md: 'flex-end' } }}>
           <Button
-            className="w-full md:w-auto"
-            onClick={() => handleStepChange(STEPS_LIST.GENERATE_TEAMS)}
+            variant="contained"
+            sx={{ width: { xs: '100%', md: 'auto' } }}
+            onClick={handleValider}
             disabled={!canContinue}
             title={
               !isValid
@@ -315,49 +642,121 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
           >
             Valider &gt;
           </Button>
-        </div>
+        </Box>
       </BottomActionBar>
 
-      <Drawer open={isAddOpen} title="Ajouter un·e joueur·euse" onClose={() => setIsAddOpen(false)}>
-        <div className="space-y-4">
-          <input
-            ref={nameInputRef}
-            type="text"
-            autoFocus
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 focus:border-brand-600 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-            placeholder="Nom du joueur·euse"
-            value={newPlayer.name}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddNewPlayer()
-            }}
-            onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-          />
+      <Drawer open={isAddOpen} title="Ajouter un·e joueur·euse" onClose={closeAddDrawer}>
+        <Stack spacing={2}>
+          <Box sx={{ position: 'relative' }}>
+            <TextField
+              inputRef={nameInputRef}
+              autoFocus
+              fullWidth
+              placeholder="Nom du joueur·euse"
+              value={newPlayer.name}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddNewPlayer()
+              }}
+              onChange={(e) => {
+                setSelectedMatch(null)
+                setNewPlayer({ ...newPlayer, name: e.target.value })
+              }}
+            />
+            {searchResults.length > 0 && (
+              <Paper
+                elevation={4}
+                sx={{
+                  position: 'absolute',
+                  insetInline: 0,
+                  top: '100%',
+                  mt: 0.5,
+                  zIndex: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                <List disablePadding>
+                  {searchResults.map((match) => {
+                    const isUsual = savedRoster.some((p) => p.id === match.id)
+                    return (
+                      <ListItemButton
+                        key={match.id}
+                        onClick={() => selectSearchResult(match)}
+                        sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+                      >
+                        <Typography fontWeight={500}>{match.name}</Typography>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{ alignItems: 'center', color: 'text.secondary' }}
+                        >
+                          <Typography variant="caption">niveau {match.skill}</Typography>
+                          {!isUsual && (
+                            <Chip
+                              label="pas habituel·le ici"
+                              size="small"
+                              color="warning"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.625rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                              }}
+                            />
+                          )}
+                        </Stack>
+                      </ListItemButton>
+                    )
+                  })}
+                </List>
+              </Paper>
+            )}
+          </Box>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Niveau</span>
+          {selectedMatch && (
+            <Typography variant="body2" color="text.secondary">
+              Niveau et genre repris de <strong>{selectedMatch.name}</strong>.
+            </Typography>
+          )}
+
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" fontWeight={500} color="text.secondary">
+              Niveau
+            </Typography>
             <NumberStepper
               value={newPlayer.skill}
               onChange={(v) => setNewPlayer({ ...newPlayer, skill: v })}
               label="Niveau du nouveau joueur·euse"
             />
-          </div>
+          </Stack>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Genre</span>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" fontWeight={500} color="text.secondary">
+              Genre
+            </Typography>
             <GenderToggle
               gender={newPlayer.gender}
               onChange={(g) => setNewPlayer({ ...newPlayer, gender: g })}
             />
-          </div>
+          </Stack>
 
           <Button
-            className="w-full"
+            variant="contained"
+            fullWidth
+            startIcon={<Plus size={16} />}
             onClick={handleAddNewPlayer}
             disabled={newPlayer.name.trim() === ''}
           >
-            <Plus className="size-4" /> Ajouter
+            Ajouter
           </Button>
-        </div>
+        </Stack>
       </Drawer>
 
       <Drawer
@@ -366,56 +765,126 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
         onClose={() => setEditingPlayerId(null)}
       >
         {editingPlayer && (
-          <div className="space-y-4">
-            <input
-              type="text"
+          <Stack spacing={2}>
+            <TextField
               autoFocus
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 focus:border-brand-600 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              fullWidth
               value={editingPlayer.name}
               onChange={(e) => handleNameChange(editingPlayer.id, e.target.value)}
             />
 
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Niveau</span>
+            {editingPlayer.isAdHoc && (
+              <Typography variant="body2" color="warning.main">
+                Invité·e ponctuel·le : ne sera pas enregistré·e dans cette liste.
+              </Typography>
+            )}
+
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <Typography variant="body2" fontWeight={500} color="text.secondary">
+                Niveau
+              </Typography>
               <NumberStepper
                 value={editingPlayer.skill}
                 onChange={(v) => handleSkillChange(editingPlayer.id, v)}
                 label={`Niveau de ${editingPlayer.name}`}
               />
-            </div>
+            </Stack>
 
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Genre</span>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <Typography variant="body2" fontWeight={500} color="text.secondary">
+                Genre
+              </Typography>
               <GenderToggle
                 gender={editingPlayer.gender}
                 onChange={(g) => handleGenderChange(editingPlayer.id, g)}
               />
-            </div>
+            </Stack>
 
-            <Button className="w-full" onClick={() => setEditingPlayerId(null)}>
+            <Button variant="contained" fullWidth onClick={() => setEditingPlayerId(null)}>
               Terminé
             </Button>
 
             <Button
-              variant="danger"
-              className="w-full"
+              variant="outlined"
+              color="error"
+              fullWidth
+              startIcon={<Trash2 size={16} />}
               onClick={() => {
                 removePlayer(editingPlayer.id)
                 setEditingPlayerId(null)
               }}
             >
-              <Trash2 className="size-4" />
               Supprimer
             </Button>
-          </div>
+          </Stack>
         )}
       </Drawer>
 
-      <Drawer open={isImportOpen} title="Coller une liste" onClose={() => setIsImportOpen(false)}>
+      <Drawer
+        open={isImportOpen}
+        title="Coller des joueur·euse·s"
+        onClose={() => setIsImportOpen(false)}
+      >
         <ImportPanel onImport={handleBulkImport} onClose={() => setIsImportOpen(false)} />
       </Drawer>
 
-      <Toast toast={toast} onDismiss={hideToast} />
+      <Drawer
+        open={isImportListOpen}
+        title="Importer depuis mes listes"
+        onClose={() => setIsImportListOpen(false)}
+      >
+        <ImportSavedListPanel onImport={handleImportFromList} excludeListId={currentList?.id} />
+      </Drawer>
+
+      <Drawer
+        open={pendingDiff !== null}
+        title="Enregistrer les modifications ?"
+        onClose={() => !isSaving && setPendingDiff(null)}
+      >
+        {pendingDiff && (
+          <Stack spacing={2}>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }}>
+              {pendingDiff.toCreate.length > 0 && (
+                <li>
+                  {pendingDiff.toCreate.length} ajout{pendingDiff.toCreate.length > 1 ? 's' : ''}{' '}
+                  sur « {currentList.name} »
+                </li>
+              )}
+              {pendingDiff.toUpdate.length > 0 && (
+                <li>
+                  {pendingDiff.toUpdate.length} modifié{pendingDiff.toUpdate.length > 1 ? 's' : ''}
+                </li>
+              )}
+              {pendingDiff.toDelete.length > 0 && (
+                <li>
+                  {pendingDiff.toDelete.length} retiré{pendingDiff.toDelete.length > 1 ? 's' : ''}{' '}
+                  de la liste
+                </li>
+              )}
+            </Box>
+
+            <Button variant="contained" fullWidth onClick={saveAndContinue} disabled={isSaving}>
+              {isSaving ? 'Enregistrement…' : 'Enregistrer et continuer'}
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={continueWithoutSaving}
+              disabled={isSaving}
+            >
+              Continuer sans enregistrer
+            </Button>
+          </Stack>
+        )}
+      </Drawer>
 
       <ConfirmDialog
         open={isClearConfirmOpen}
@@ -425,7 +894,7 @@ const PlayersList = ({ handleStepChange, players, setPlayers }) => {
         onConfirm={confirmClearPlayers}
         onCancel={() => setIsClearConfirmOpen(false)}
       />
-    </div>
+    </Box>
   )
 }
 

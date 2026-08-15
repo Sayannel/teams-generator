@@ -1,8 +1,10 @@
-const STATUS_DOT_COLOR = {
-  success: 'bg-green-500',
-  good: 'bg-teal-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
+import Box from '@mui/material/Box'
+
+const STATUS_COLOR = {
+  success: 'success.main',
+  good: 'good.main',
+  warning: 'warning.main',
+  danger: 'error.main',
 }
 
 const RatingDots = ({ status, filled, total = 4, label }) => {
@@ -11,16 +13,19 @@ const RatingDots = ({ status, filled, total = 4, label }) => {
   const clampedFilled = Math.max(1, filled ?? 0)
 
   return (
-    <div className="flex items-center gap-1" role="img" aria-label={label}>
+    <Box role="img" aria-label={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       {Array.from({ length: total }, (_, i) => (
-        <span
+        <Box
           key={i}
-          className={`size-3 rounded-full ${
-            i < clampedFilled ? STATUS_DOT_COLOR[status] : 'bg-slate-200 dark:bg-slate-700'
-          }`}
+          sx={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            bgcolor: i < clampedFilled ? STATUS_COLOR[status] : 'action.disabledBackground',
+          }}
         />
       ))}
-    </div>
+    </Box>
   )
 }
 

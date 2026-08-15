@@ -113,9 +113,9 @@ export function evaluateBalanceScore(teams) {
   const totals = teams.map(teamTotal)
   const gap = Math.max(...totals) - Math.min(...totals)
 
-  if (gap <= 1) return { label: 'Parfaitement équilibré', status: 'success', gap, level: 4 }
-  if (gap <= 2) return { label: 'Très équilibré', status: 'good', gap, level: 3 }
-  if (gap <= 4) return { label: 'Moyennement équilibré', status: 'warning', gap, level: 2 }
+  if (gap <= 1) return { label: 'Bon', status: 'success', gap, level: 4 }
+  if (gap <= 2) return { label: 'Correct', status: 'good', gap, level: 3 }
+  if (gap <= 4) return { label: 'Moyen', status: 'warning', gap, level: 2 }
   return { label: 'Déséquilibré', status: 'danger', gap, level: 1 }
 }
 
@@ -139,7 +139,7 @@ export function evaluateGenderParity(teams) {
 
   // A single-gender roster has nothing to mix — that's not a parity problem.
   if (totalMale === 0 || totalFemale === 0) {
-    return { label: 'Parité parfaite', status: 'success', gap: 0, level: 4 }
+    return { label: 'Bonne', status: 'success', gap: 0, level: 4 }
   }
 
   const minorityCounts = teams.map((t) =>
@@ -147,10 +147,10 @@ export function evaluateGenderParity(teams) {
   )
   const gap = minorityCounts.filter((count) => count === 0).length
 
-  if (gap === 0) return { label: 'Parité parfaite', status: 'success', gap, level: 4 }
-  if (gap === 1) return { label: 'Bonne parité', status: 'good', gap, level: 3 }
-  if (gap === 2) return { label: 'Parité moyenne', status: 'warning', gap, level: 2 }
-  return { label: 'Parité déséquilibrée', status: 'danger', gap, level: 1 }
+  if (gap === 0) return { label: 'Bonne', status: 'success', gap, level: 4 }
+  if (gap === 1) return { label: 'Correcte', status: 'good', gap, level: 3 }
+  if (gap === 2) return { label: 'Moyenne', status: 'warning', gap, level: 2 }
+  return { label: 'Déséquilibrée', status: 'danger', gap, level: 1 }
 }
 
 /**

@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { ChevronDown, Mars, Venus } from 'lucide-react'
-import { Card } from './ui/Card'
+import { ChevronDown, Mars, Users, Venus } from 'lucide-react'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
+import { useTheme } from '@mui/material/styles'
 import DonutChart from './ui/DonutChart'
 import RatingDots from './ui/RatingDots'
 import { getLevelColor } from '../lib/colorRamp'
+
+const HISTOGRAM_HEIGHT = 128
 
 const GENDER_COLORS = { female: '#f43f5e', male: '#6366f1' }
 
 const PlayerDistributionSummary = ({ players, balanceScore, genderParityScore }) => {
   const [isOpen, setIsOpen] = useState(true)
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const total = players.length
 
   if (total === 0) return null
@@ -29,122 +38,253 @@ const PlayerDistributionSummary = ({ players, balanceScore, genderParityScore })
       return acc
     }, {})
   ).sort(([a], [b]) => Number(a) - Number(b))
+  const maxSkillCount = Math.max(...groupedBySkill.map(([, count]) => count))
 
   return (
-    <Card>
-      <button
+    <Card variant="outlined">
+      <Box
+        component="button"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className="flex min-h-11 w-full items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-left font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100"
+        sx={{
+          display: 'flex',
+          width: '100%',
+          minHeight: 44,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          border: 0,
+          borderBottom: 1,
+          borderColor: 'divider',
+          bgcolor: 'action.hover',
+          px: 2,
+          py: 1.5,
+          textAlign: 'left',
+          font: 'inherit',
+          fontWeight: 700,
+          color: 'text.primary',
+          cursor: 'pointer',
+        }}
       >
         Répartition des joueur·euses
-        <span className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
-            {total} joueur·euse·s
-          </span>
-          <ChevronDown
-            className={`size-5 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </span>
-      </button>
+        <ChevronDown
+          size={20}
+          style={{
+            color: 'inherit',
+            opacity: 0.5,
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.15s',
+          }}
+        />
+      </Box>
 
       {isOpen && (
-        <div className="p-4">
+        <Box sx={{ p: 2 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 2.5 }}>
+            <Users size={20} style={{ flexShrink: 0 }} />
+            <Typography variant="h6" fontWeight={700} color="primary.main">
+              {total}
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              joueur·euse·s
+            </Typography>
+          </Stack>
+
           {(balanceScore || genderParityScore) && (
-            <div className="mb-5 grid grid-cols-2 gap-4 border-b border-slate-100 pb-5 dark:border-slate-800">
+            <Grid
+              container
+              spacing={2}
+              sx={{ mb: 2.5, pb: 2.5, borderBottom: 1, borderColor: 'divider' }}
+            >
               {balanceScore && (
-                <div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                <Grid size={6}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    sx={{
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                      display: 'block',
+                      mb: 0.5,
+                    }}
+                    color="text.secondary"
+                  >
                     Équilibre
-                  </p>
+                  </Typography>
+                  <Box
+                    sx={{ width: 20, height: 3, bgcolor: 'primary.main', borderRadius: 1, mb: 1 }}
+                  />
                   <RatingDots
                     status={balanceScore.status}
                     filled={balanceScore.level}
                     label={balanceScore.label}
                   />
-                  <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">{balanceScore.label}</p>
-                </div>
+                  <Typography variant="body2" fontWeight={500} sx={{ mt: 0.5 }}>
+                    {balanceScore.label}
+                  </Typography>
+                </Grid>
               )}
               {genderParityScore && (
-                <div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                <Grid size={6}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    sx={{
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                      display: 'block',
+                      mb: 0.5,
+                    }}
+                    color="text.secondary"
+                  >
                     Parité
-                  </p>
+                  </Typography>
+                  <Box
+                    sx={{ width: 20, height: 3, bgcolor: 'primary.main', borderRadius: 1, mb: 1 }}
+                  />
                   <RatingDots
                     status={genderParityScore.status}
                     filled={genderParityScore.level}
                     label={genderParityScore.label}
                   />
-                  <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <Typography variant="body2" fontWeight={500} sx={{ mt: 0.5 }}>
                     {genderParityScore.label}
-                  </p>
-                </div>
+                  </Typography>
+                </Grid>
               )}
-            </div>
+            </Grid>
           )}
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="flex flex-col items-center gap-3">
-              <p className="self-start text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                Genre
-              </p>
-              <DonutChart
-                segments={genderSegments}
-                centerLabel={total}
-                centerSublabel="joueur·euse·s"
-              />
-              <div className="w-full space-y-1.5">
-                <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                  <Venus className="size-4 shrink-0 text-rose-500" />
-                  Féminin
-                  <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{femalePct}%</span>
-                  <span className="w-6 shrink-0 text-right font-semibold text-slate-900 dark:text-slate-100">
-                    {femaleCount}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                  <Mars className="size-4 shrink-0 text-indigo-500" />
-                  Masculin
-                  <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{malePct}%</span>
-                  <span className="w-6 shrink-0 text-right font-semibold text-slate-900 dark:text-slate-100">
-                    {maleCount}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
+                <Box sx={{ alignSelf: 'flex-start' }}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    color="text.secondary"
+                    sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+                  >
+                    Genre
+                  </Typography>
+                  <Box
+                    sx={{ width: 20, height: 3, bgcolor: 'primary.main', borderRadius: 1, mt: 0.5 }}
+                  />
+                </Box>
+                <DonutChart
+                  segments={genderSegments}
+                  size={174}
+                  strokeWidth={4}
+                  centerLabel={total}
+                  centerSublabel="joueur·euse·s"
+                />
+                <Stack spacing={0.75} sx={{ width: '100%' }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <Venus size={16} style={{ flexShrink: 0, color: GENDER_COLORS.female }} />
+                    <Typography variant="body2">Féminin</Typography>
+                    <Typography variant="caption" color="text.disabled" sx={{ ml: 'auto' }}>
+                      {femalePct}%
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ width: 24, textAlign: 'right' }}
+                    >
+                      {femaleCount}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <Mars size={16} style={{ flexShrink: 0, color: GENDER_COLORS.male }} />
+                    <Typography variant="body2">Masculin</Typography>
+                    <Typography variant="caption" color="text.disabled" sx={{ ml: 'auto' }}>
+                      {malePct}%
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ width: 24, textAlign: 'right' }}
+                    >
+                      {maleCount}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </Grid>
 
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                Niveaux
-              </p>
-              <div className="flex flex-col gap-2.5">
-                {groupedBySkill.map(([skill, count], index) => {
-                  const pct = Math.round((count / total) * 100)
-                  return (
-                    <div key={skill} className="flex items-center gap-2">
-                      <span className="min-w-16 shrink-0 whitespace-nowrap text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Niveau {skill}
-                      </span>
-                      <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor: getLevelColor(index, groupedBySkill.length),
-                          }}
-                        />
-                      </div>
-                      <span className="min-w-14 shrink-0 whitespace-nowrap text-right text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        {count} · {pct}%
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Stack spacing={1.5}>
+                <Box sx={{ alignSelf: 'flex-start' }}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    color="text.secondary"
+                    sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+                  >
+                    Niveaux
+                  </Typography>
+                  <Box
+                    sx={{ width: 20, height: 3, bgcolor: 'primary.main', borderRadius: 1, mt: 0.5 }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: 1,
+                    height: HISTOGRAM_HEIGHT,
+                    px: 0.5,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                  }}
+                >
+                  {groupedBySkill.map(([skill, count], index) => (
+                    <Box
+                      key={skill}
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        height: '100%',
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        fontWeight={600}
+                        color="text.secondary"
+                        sx={{ mb: 0.5 }}
+                      >
+                        {count}
+                      </Typography>
+                      <Box
+                        sx={{
+                          width: '100%',
+                          maxWidth: 28,
+                          height: `${(count / maxSkillCount) * 100}%`,
+                          borderRadius: '4px 4px 0 0',
+                          bgcolor: getLevelColor(index, groupedBySkill.length, isDark),
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, px: 0.5 }}>
+                  {groupedBySkill.map(([skill]) => (
+                    <Typography
+                      key={skill}
+                      variant="caption"
+                      color="text.disabled"
+                      sx={{ flex: 1, textAlign: 'center' }}
+                    >
+                      {skill}
+                    </Typography>
+                  ))}
+                </Box>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Box>
       )}
     </Card>
   )

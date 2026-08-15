@@ -1,0 +1,462 @@
+import { useEffect, useRef, useState } from 'react'
+import {
+  ArrowLeft,
+  ClipboardPaste,
+  Mars,
+  Pencil,
+  Plus,
+  Trash2,
+  UserPlus,
+  Users,
+  Venus,
+} from 'lucide-react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import { useTheme } from '@mui/material/styles'
+import { api, ApiError } from '../lib/api'
+import Drawer from '../components/ui/Drawer'
+import ImportPanel from '../components/ImportPanel'
+import NumberStepper from '../components/ui/NumberStepper'
+import GenderToggle from '../components/ui/GenderToggle'
+import { useToast } from '../components/ui/ToastProvider'
+
+const emptyNewPlayer = { name: '', skill: 1, gender: 'male' }
+
+/**
+ * Dedicated editor for a single saved list: rename it and manage its roster
+ * in place (unlike the step-2 players table, every change here persists
+ * immediately — there's no downstream "Valider" to batch a diff into).
+ */
+const ListDetail = ({ listId, onBack }) => {
+  const theme = useTheme()
+  const { showToast } = useToast()
+  const nameInputRef = useRef(null)
+  const [list, setList] = useState(null) // { id, name, players }
+  const [name, setName] = useState('')
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [newPlayer, setNewPlayer] = useState(emptyNewPlayer)
+  const [selectedMatch, setSelectedMatch] = useState(null)
+  const [searchResults, setSearchResults] = useState([])
+
+  useEffect(() => {
+    api
+      .getList(listId)
+      .then((detail) => {
+        setList(detail)
+        setName(detail.name)
+      })
+      .catch(() => showToast('Impossible de charger cette liste.', 'error'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listId])
+
+  // Same debounced typeahead as the step-2 roster editor, scoped to this list.
+  useEffect(() => {
+    const query = newPlayer.name.trim()
+    if (selectedMatch || query.length < 2 || !list) {
+      setSearchResults([])
+      return undefined
+    }
+    const handle = setTimeout(() => {
+      api
+        .searchPlayers(query)
+        .then(({ players: found }) => {
+          setSearchResults(
+            found.filter((p) => !list.players.some((existing) => existing.id === p.id))
+          )
+        })
+        .catch(() => {})
+    }, 250)
+    return () => clearTimeout(handle)
+  }, [newPlayer.name, selectedMatch, list])
+
+  const goBack = () => {
+    if (list) onBack({ id: list.id, name: list.name, memberCount: list.players.length })
+    else onBack(null)
+  }
+
+  const commitName = async () => {
+    const trimmed = name.trim()
+    if (trimmed === '' || trimmed === list.name) {
+      setName(list.name)
+      return
+    }
+    try {
+      const updated = await api.updateList(list.id, { name: trimmed })
+      setList((prev) => ({ ...prev, name: updated.name }))
+      setName(updated.name)
+    } catch (error) {
+      const isTaken = error instanceof ApiError && error.data?.error === 'list_name_taken'
+      showToast(isTaken ? 'Ce nom de liste existe déjà.' : 'Une erreur est survenue.', 'error')
+      setName(list.name)
+    }
+  }
+
+  const selectSearchResult = (match) => {
+    setSelectedMatch(match)
+    setNewPlayer({ name: match.name, skill: match.skill, gender: match.gender })
+    setSearchResults([])
+  }
+
+  const closeAddDrawer = () => {
+    setIsAddOpen(false)
+    setNewPlayer((prev) => ({ ...emptyNewPlayer, skill: prev.skill, gender: prev.gender }))
+    setSelectedMatch(null)
+    setSearchResults([])
+  }
+
+  const submitAddPlayer = async () => {
+    const trimmed = newPlayer.name.trim()
+    if (!trimmed) return
+    if (list.players.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
+      showToast('Ce nom existe déjà dans la liste.', 'error')
+      return
+    }
+    try {
+      const player = await api.attachPlayer(list.id, {
+        name: trimmed,
+        skill: newPlayer.skill,
+        gender: newPlayer.gender,
+      })
+      setList((prev) => ({ ...prev, players: [...prev.players, player] }))
+      setNewPlayer({ name: '', skill: player.skill, gender: player.gender })
+      setSelectedMatch(null)
+      setSearchResults([])
+      nameInputRef.current?.focus()
+    } catch {
+      showToast("Impossible d'ajouter ce joueur·euse.", 'error')
+    }
+  }
+
+  const handleBulkImport = async (importedPlayers) => {
+    setIsImportOpen(false)
+    const existingNames = new Set(list.players.map((p) => p.name.toLowerCase()))
+    const newPlayers = importedPlayers.filter((p) => !existingNames.has(p.name.toLowerCase()))
+    const skipped = importedPlayers.length - newPlayers.length
+
+    const results = await Promise.allSettled(
+      newPlayers.map((p) =>
+        api.attachPlayer(list.id, { name: p.name, skill: p.skill, gender: p.gender })
+      )
+    )
+    const attached = results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
+    const failed = results.length - attached.length
+
+    if (attached.length > 0) {
+      setList((prev) => ({ ...prev, players: [...prev.players, ...attached] }))
+    }
+    if (skipped > 0) {
+      showToast(
+        `${skipped} nom${skipped > 1 ? 's' : ''} déjà présent${skipped > 1 ? 's' : ''} dans la liste, ignoré${skipped > 1 ? 's' : ''}.`,
+        'error'
+      )
+    }
+    if (failed > 0) {
+      showToast(`${failed} joueur·euse${failed > 1 ? 's' : ''} n'a pas pu être ajouté·e.`, 'error')
+    }
+  }
+
+  const removePlayer = async (player) => {
+    setList((prev) => ({ ...prev, players: prev.players.filter((p) => p.id !== player.id) }))
+    try {
+      await api.detachPlayer(list.id, player.id)
+      showToast(`${player.name} retiré·e.`, 'success')
+    } catch {
+      showToast('Impossible de retirer ce joueur·euse.', 'error')
+      setList((prev) => ({ ...prev, players: [...prev.players, player] }))
+    }
+  }
+
+  const updatePlayerField = async (player, patch) => {
+    setList((prev) => ({
+      ...prev,
+      players: prev.players.map((p) => (p.id === player.id ? { ...p, ...patch } : p)),
+    }))
+    try {
+      await api.updatePlayer(player.id, {
+        name: player.name,
+        skill: player.skill,
+        gender: player.gender,
+        ...patch,
+      })
+    } catch {
+      showToast('Impossible de mettre à jour ce joueur·euse.', 'error')
+      // Revert only the fields this call patched, against whatever the list
+      // currently holds — not the whole `player` snapshot from before this
+      // call, which would also wipe out a different, already-succeeded
+      // concurrent edit (e.g. skill and gender changed back to back).
+      const revert = Object.fromEntries(Object.keys(patch).map((key) => [key, player[key]]))
+      setList((prev) => ({
+        ...prev,
+        players: prev.players.map((p) => (p.id === player.id ? { ...p, ...revert } : p)),
+      }))
+    }
+  }
+
+  const commitPlayerName = (player, rawName) => {
+    const trimmed = rawName.trim()
+    if (trimmed === '' || trimmed === player.name) return
+    updatePlayerField(player, { name: trimmed })
+  }
+
+  if (list === null) {
+    return (
+      <Typography color="text.disabled" sx={{ py: 6, textAlign: 'center' }}>
+        Chargement…
+      </Typography>
+    )
+  }
+
+  const sortedPlayers = [...list.players].sort((a, b) => a.skill - b.skill)
+
+  return (
+    <Box>
+      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
+        <IconButton onClick={goBack} aria-label="Retour à mes listes">
+          <ArrowLeft size={20} />
+        </IconButton>
+        <TextField
+          variant="standard"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          fullWidth
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Pencil size={16} color={theme.palette.text.disabled} />
+                </InputAdornment>
+              ),
+              sx: {
+                fontSize: '1.5rem',
+                fontWeight: 600,
+                '&:before': { borderBottomColor: 'divider' },
+              },
+            },
+          }}
+          aria-label="Nom de la liste"
+        />
+      </Stack>
+
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mb: 2, alignItems: 'center', justifyContent: 'flex-end' }}
+      >
+        <Chip
+          variant="outlined"
+          icon={<Users size={14} />}
+          label={sortedPlayers.length}
+          sx={{
+            flexShrink: 0,
+            height: 44,
+            px: 1,
+            borderColor: 'divider',
+            color: 'text.secondary',
+            '& .MuiChip-icon': { color: 'text.secondary' },
+          }}
+        />
+        <Button
+          variant="outlined"
+          startIcon={<ClipboardPaste size={16} />}
+          onClick={() => setIsImportOpen(true)}
+        >
+          Coller une liste
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Plus size={16} />}
+          onClick={() => setIsAddOpen(true)}
+        >
+          Ajouter
+        </Button>
+      </Stack>
+
+      {sortedPlayers.length === 0 ? (
+        <Card
+          variant="outlined"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 1,
+            py: 6,
+            textAlign: 'center',
+          }}
+        >
+          <UserPlus size={40} color={theme.palette.primary.main} style={{ marginBottom: 4 }} />
+          <Typography variant="h6" fontWeight={500} color="text.secondary">
+            Aucun·e joueur·euse pour l'instant
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Utilise « Ajouter » pour commencer le roster de cette liste.
+          </Typography>
+        </Card>
+      ) : (
+        <Stack spacing={1}>
+          {sortedPlayers.map((player) => (
+            <Card key={player.id} variant="outlined" sx={{ p: 1.25 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <TextField
+                  key={`${player.id}-${player.name}`}
+                  variant="standard"
+                  defaultValue={player.name}
+                  onBlur={(e) => commitPlayerName(player, e.target.value)}
+                  aria-label={`Nom de ${player.name}`}
+                  sx={{ flex: 1, minWidth: 120 }}
+                  slotProps={{ input: { disableUnderline: true, sx: { fontWeight: 500 } } }}
+                />
+                <NumberStepper
+                  value={player.skill}
+                  onChange={(v) => updatePlayerField(player, { skill: v })}
+                  label={`Niveau de ${player.name}`}
+                />
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    onClick={() => updatePlayerField(player, { gender: 'male' })}
+                    aria-pressed={player.gender === 'male'}
+                    aria-label={`${player.name} masculin`}
+                    color={player.gender === 'male' ? 'info' : 'default'}
+                    sx={{ bgcolor: player.gender === 'male' ? 'action.selected' : 'transparent' }}
+                  >
+                    <Mars size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => updatePlayerField(player, { gender: 'female' })}
+                    aria-pressed={player.gender === 'female'}
+                    aria-label={`${player.name} féminin`}
+                    color={player.gender === 'female' ? 'primary' : 'default'}
+                    sx={{ bgcolor: player.gender === 'female' ? 'action.selected' : 'transparent' }}
+                  >
+                    <Venus size={16} />
+                  </IconButton>
+                </Stack>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => removePlayer(player)}
+                  aria-label={`Retirer ${player.name}`}
+                >
+                  <Trash2 size={16} />
+                </IconButton>
+              </Stack>
+            </Card>
+          ))}
+        </Stack>
+      )}
+
+      <Drawer open={isAddOpen} title="Ajouter un·e joueur·euse" onClose={closeAddDrawer}>
+        <Stack spacing={2}>
+          <Box sx={{ position: 'relative' }}>
+            <TextField
+              inputRef={nameInputRef}
+              autoFocus
+              fullWidth
+              placeholder="Nom du joueur·euse"
+              value={newPlayer.name}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitAddPlayer()
+              }}
+              onChange={(e) => {
+                setSelectedMatch(null)
+                setNewPlayer({ ...newPlayer, name: e.target.value })
+              }}
+            />
+            {searchResults.length > 0 && (
+              <Paper
+                elevation={4}
+                sx={{
+                  position: 'absolute',
+                  insetInline: 0,
+                  top: '100%',
+                  mt: 0.5,
+                  zIndex: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                <List disablePadding>
+                  {searchResults.map((match) => (
+                    <ListItemButton
+                      key={match.id}
+                      onClick={() => selectSearchResult(match)}
+                      sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}
+                    >
+                      <Typography fontWeight={500}>{match.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        niveau {match.skill}
+                      </Typography>
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Paper>
+            )}
+          </Box>
+
+          {selectedMatch && (
+            <Typography variant="body2" color="text.secondary">
+              Niveau et genre repris de <strong>{selectedMatch.name}</strong>.
+            </Typography>
+          )}
+
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" fontWeight={500} color="text.secondary">
+              Niveau
+            </Typography>
+            <NumberStepper
+              value={newPlayer.skill}
+              onChange={(v) => setNewPlayer({ ...newPlayer, skill: v })}
+              label="Niveau du nouveau joueur·euse"
+            />
+          </Stack>
+
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" fontWeight={500} color="text.secondary">
+              Genre
+            </Typography>
+            <GenderToggle
+              gender={newPlayer.gender}
+              onChange={(g) => setNewPlayer({ ...newPlayer, gender: g })}
+            />
+          </Stack>
+
+          <Button
+            variant="contained"
+            fullWidth
+            startIcon={<Plus size={16} />}
+            onClick={submitAddPlayer}
+            disabled={newPlayer.name.trim() === ''}
+          >
+            Ajouter
+          </Button>
+        </Stack>
+      </Drawer>
+
+      <Drawer open={isImportOpen} title="Coller une liste" onClose={() => setIsImportOpen(false)}>
+        <ImportPanel onImport={handleBulkImport} onClose={() => setIsImportOpen(false)} />
+      </Drawer>
+    </Box>
+  )
+}
+
+export default ListDetail

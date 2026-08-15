@@ -1,3 +1,6 @@
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import InputBase from '@mui/material/InputBase'
 import { Minus, Plus } from 'lucide-react'
 
 const NumberStepper = ({ value, onChange, min = 1, max = Infinity, step = 1, label }) => {
@@ -10,38 +13,58 @@ const NumberStepper = ({ value, onChange, min = 1, max = Infinity, step = 1, lab
   }
 
   return (
-    <div
-      className="inline-flex items-center rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800"
+    <Box
       role="group"
       aria-label={label}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: '12px',
+        bgcolor: 'background.paper',
+      }}
     >
-      <button
-        type="button"
+      <IconButton
         onClick={decrement}
         disabled={value <= min}
-        className="flex size-11 items-center justify-center text-brand-600 disabled:opacity-30"
         aria-label="Diminuer"
+        color="primary"
+        sx={{ borderRadius: '11px 0 0 11px' }}
       >
-        <Minus className="size-5" />
-      </button>
-      <input
+        <Minus size={20} />
+      </IconButton>
+      <InputBase
         type="number"
         inputMode="numeric"
-        className="w-14 border-x border-slate-300 bg-transparent py-2 text-center text-lg font-semibold text-slate-900 outline-none [appearance:textfield] dark:border-slate-600 dark:text-slate-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         value={value}
         onChange={handleInputChange}
-        aria-label={label}
+        inputProps={{ 'aria-label': label, style: { textAlign: 'center' } }}
+        sx={{
+          width: 56,
+          borderLeft: 1,
+          borderRight: 1,
+          borderColor: 'divider',
+          px: 1,
+          fontWeight: 600,
+          fontSize: '1.125rem',
+          '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button':
+            {
+              WebkitAppearance: 'none',
+              margin: 0,
+            },
+        }}
       />
-      <button
-        type="button"
+      <IconButton
         onClick={increment}
         disabled={value >= max}
-        className="flex size-11 items-center justify-center text-brand-600 disabled:opacity-30"
         aria-label="Augmenter"
+        color="primary"
+        sx={{ borderRadius: '0 11px 11px 0' }}
       >
-        <Plus className="size-5" />
-      </button>
-    </div>
+        <Plus size={20} />
+      </IconButton>
+    </Box>
   )
 }
 

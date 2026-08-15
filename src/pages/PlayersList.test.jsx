@@ -3,10 +3,15 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import PlayersList from './PlayersList'
+import { ToastProvider } from '../components/ui/ToastProvider'
 
 function Wrapper({ initialPlayers = [] }) {
   const [players, setPlayers] = useState(initialPlayers)
-  return <PlayersList handleStepChange={() => {}} players={players} setPlayers={setPlayers} />
+  return (
+    <ToastProvider>
+      <PlayersList handleStepChange={() => {}} players={players} setPlayers={setPlayers} />
+    </ToastProvider>
+  )
 }
 
 describe('PlayersList', () => {

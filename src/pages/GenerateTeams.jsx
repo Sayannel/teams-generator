@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Dices, Pencil } from 'lucide-react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
 import PlayerDistributionSummary from '../components/PlayerDistributionSummary'
 import TeamSummary from '../components/TeamSummary'
 import { STEPS_LIST } from '../App'
 import { generateTeams as generateTeamsFromPlayers } from '../lib/teamGenerator'
-import Button from '../components/ui/Button'
 import BottomActionBar from '../components/ui/BottomActionBar'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import { useToast } from '../components/ui/ToastProvider'
 
 const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) => {
+  const { showToast } = useToast()
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [balanceScore, setBalanceScore] = useState(null)
   const [genderParityScore, setGenderParityScore] = useState(null)
@@ -30,6 +36,7 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) =
   const confirmRegenerate = () => {
     setIsRegenerateConfirmOpen(false)
     generateBestTeams()
+    showToast('Nouvelle répartition générée.', 'success')
   }
 
   const handlePlayerSwap = (teamIndex, playerIndex) => {
@@ -44,69 +51,88 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) =
 
       setTeams(newTeams)
       setSelectedPlayer(null)
+      showToast('Joueur·euse·s échangé·es.', 'success')
     }
   }
 
   return (
-    <div className="pb-48 md:pb-0">
-      <h2 className="mb-4 text-xl font-bold text-slate-900 dark:text-slate-100">Génération</h2>
+    <Box sx={{ pb: { xs: 24, md: 0 } }}>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+        Création des équipes
+      </Typography>
 
       {selectedPlayer && (
-        <div className="mb-4 rounded-lg bg-amber-50 p-3 text-center text-sm font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        <Alert severity="warning" sx={{ mb: 2, justifyContent: 'center', textAlign: 'center' }}>
           Sélectionnez un·e second·e joueur·euse pour échanger les deux.
-        </div>
+        </Alert>
       )}
 
-      <div className="mb-4">
+      <Box sx={{ mb: 2 }}>
         <PlayerDistributionSummary
           players={players}
           balanceScore={balanceScore}
           genderParityScore={genderParityScore}
         />
-      </div>
+      </Box>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          gap: 3,
+          py: 4,
+        }}
+      >
         {teams.map((team, i) => (
           <TeamSummary
+            key={i}
             team={team}
             maxPlayerByTeam={maxPlayerByTeam}
             selectedPlayer={selectedPlayer}
             handlePlayerSwap={handlePlayerSwap}
             index={i}
-            key={i}
           />
         ))}
-      </div>
+      </Box>
 
-      <BottomActionBar className="md:mt-4">
-        <div className="md:flex md:gap-3">
-          <div className="mb-2 grid grid-cols-2 gap-2 md:mb-0 md:contents">
+      <BottomActionBar sx={{ mt: { md: 2 } }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 1, md: 1.5 }}>
+          <Stack direction="row" spacing={1} sx={{ display: { md: 'contents' } }}>
             <Button
-              variant="outline"
-              className="md:flex-1"
+              variant="outlined"
+              startIcon={<Pencil size={16} />}
               onClick={() => handleStepChange(STEPS_LIST.PLAYERS_LIST)}
+              sx={{ flex: { xs: 1, md: '0 0 auto' } }}
             >
-              <Pencil className="size-4" />
-              <span className="md:hidden">Éditer</span>
-              <span className="hidden md:inline">Éditer les joueur·euse·s</span>
+              <Box component="span" sx={{ display: { md: 'none' } }}>
+                Éditer
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                Éditer les joueur·euse·s
+              </Box>
             </Button>
             <Button
-              variant="outline"
-              className="md:flex-1"
+              variant="outlined"
+              startIcon={<Dices size={16} />}
               onClick={() => setIsRegenerateConfirmOpen(true)}
+              sx={{ flex: { xs: 1, md: '0 0 auto' } }}
             >
-              <Dices className="size-4" />
-              <span className="md:hidden">Relancer</span>
-              <span className="hidden md:inline">Relancer la génération</span>
+              <Box component="span" sx={{ display: { md: 'none' } }}>
+                Relancer
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                Relancer la génération
+              </Box>
             </Button>
-          </div>
+          </Stack>
           <Button
-            className="w-full md:w-auto md:flex-[2]"
+            variant="contained"
             onClick={() => handleStepChange(STEPS_LIST.EXPORT_TEAMS)}
+            sx={{ width: { xs: '100%', md: 'auto' }, flex: { md: 2 } }}
           >
             Valider les équipes
           </Button>
-        </div>
+        </Stack>
       </BottomActionBar>
 
       <ConfirmDialog
@@ -117,7 +143,7 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) =
         onConfirm={confirmRegenerate}
         onCancel={() => setIsRegenerateConfirmOpen(false)}
       />
-    </div>
+    </Box>
   )
 }
 

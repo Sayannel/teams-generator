@@ -172,7 +172,7 @@ const Home = ({ onStartNewSession, onResumeList, onManageLists }) => {
 
       <Drawer
         open={pendingList !== null}
-        title="Qui est là ce soir ?"
+        title="Qui est là ce soir ?"
         onClose={() => setPendingList(null)}
       >
         {pendingList && (

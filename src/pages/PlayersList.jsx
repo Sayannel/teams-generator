@@ -603,7 +603,7 @@ const PlayersList = ({
                     py: 1.5,
                   }}
                 >
-                  Nombre de joueur·euse·s :{' '}
+                  Nombre de joueur·euse·s&nbsp;:{' '}
                   <Box component="span" sx={{ fontWeight: 700 }}>
                     {sortedPlayers.length}
                   </Box>
@@ -775,7 +775,7 @@ const PlayersList = ({
 
             {editingPlayer.isAdHoc && (
               <Typography variant="body2" color="warning.main">
-                Invité·e ponctuel·le : ne sera pas enregistré·e dans cette liste.
+                Invité·e ponctuel·le&nbsp;: ne sera pas enregistré·e dans cette liste.
               </Typography>
             )}
 
@@ -846,7 +846,7 @@ const PlayersList = ({
 
       <Drawer
         open={pendingDiff !== null}
-        title="Enregistrer les modifications ?"
+        title="Enregistrer les modifications ?"
         onClose={() => !isSaving && setPendingDiff(null)}
       >
         {pendingDiff && (
@@ -888,7 +888,7 @@ const PlayersList = ({
 
       <ConfirmDialog
         open={isClearConfirmOpen}
-        title="Effacer la liste ?"
+        title="Effacer la liste ?"
         message="Tou·te·s les joueur·euse·s seront retiré·e·s de la liste."
         confirmLabel="Effacer"
         onConfirm={confirmClearPlayers}

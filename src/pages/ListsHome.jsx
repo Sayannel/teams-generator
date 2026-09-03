@@ -267,7 +267,7 @@ const ListsHome = ({ onBack, user }) => {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Supprimer cette liste ?"
+        title="Supprimer cette liste ?"
         message={`« ${deleteTarget?.name} » et son roster seront définitivement supprimés.`}
         confirmLabel="Supprimer"
         onConfirm={confirmDelete}

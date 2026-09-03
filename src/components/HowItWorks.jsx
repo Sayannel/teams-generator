@@ -40,14 +40,14 @@ const HowItWorks = ({ sx }) => {
             alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.07),
         }}
       >
-        <Typography fontWeight={700}>💡 Comment ça marche ?</Typography>
+        <Typography fontWeight={700}>💡 Comment ça marche&nbsp;?</Typography>
       </AccordionSummary>
       <AccordionDetails sx={{ pt: 2.5 }}>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          🏐 Bienvenue dans le générateur d'équipes de volley !
+          🏐 Bienvenue dans le générateur d'équipes de volley&nbsp;!
         </Typography>
         <Typography color="text.secondary" sx={{ mb: 2.5 }}>
-          Fini les équipes bricolées à la main : donnez-nous votre liste de joueur·euse·s, on
+          Fini les équipes bricolées à la main&nbsp;: donnez-nous votre liste de joueur·euse·s, on
           s'occupe du reste. En quatre étapes, vous obtenez des équipes équilibrées, prêtes à jouer.
         </Typography>
 
@@ -78,7 +78,7 @@ const HowItWorks = ({ sx }) => {
         </Stack>
 
         <Typography fontWeight={600} sx={{ mb: 1 }}>
-          ✨ Sous le capot, l'algorithme veille à :
+          ✨ Sous le capot, l'algorithme veille à&nbsp;:
         </Typography>
         <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }}>
           {RULES.map((rule) => (

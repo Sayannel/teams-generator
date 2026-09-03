@@ -149,7 +149,7 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams, cur
 
       <ConfirmDialog
         open={isRegenerateConfirmOpen}
-        title="Relancer la génération ?"
+        title="Relancer la génération ?"
         message="Les équipes actuelles seront remplacées par une nouvelle répartition."
         confirmLabel="Relancer"
         onConfirm={confirmRegenerate}

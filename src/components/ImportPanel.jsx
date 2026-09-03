@@ -24,7 +24,7 @@ const ImportPanel = ({ onImport, onClose }) => {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         <i>Le niveau 1 correspond aux débutant·e·s, il n'y a pas de niveau maximum.</i>
         <br />
-        Une ligne par joueur·euse :{' '}
+        Une ligne par joueur·euse&nbsp;:{' '}
         <Box component="code" sx={{ borderRadius: 0.5, bgcolor: 'action.hover', px: 0.5 }}>
           Nom
         </Box>

@@ -21,7 +21,7 @@ function send_otp_email(string $to, string $code): bool
     $subject = mb_encode_mimeheader('Votre code de connexion', 'UTF-8', 'B', "\r\n");
     $fromName = mb_encode_mimeheader($mailCfg['from_name'], 'UTF-8', 'B', "\r\n");
 
-    $body = "Voici votre code de connexion : {$code}\n\n"
+    $body = "Voici votre code de connexion\u{00A0}: {$code}\n\n"
         . "Ce code expire dans {$ttlMinutes} minutes.\n\n"
         . "Si vous n'avez pas demandé ce code, ignorez cet e-mail.\n";
 

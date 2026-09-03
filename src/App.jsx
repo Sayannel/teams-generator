@@ -265,7 +265,7 @@ const App = () => {
 
           <ConfirmDialog
             open={isHomeConfirmOpen}
-            title="Retourner à l'accueil ?"
+            title="Retourner à l'accueil ?"
             message="La configuration, les joueur·euse·s et les équipes générées seront réinitialisés."
             confirmLabel="Confirmer"
             onConfirm={confirmGoHome}

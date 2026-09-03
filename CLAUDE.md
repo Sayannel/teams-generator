@@ -41,6 +41,22 @@ Expect `401 {"error":"unauthorized"}` — a `500` with `could not find
 driver` means `pdo_mysql` didn't finish compiling yet or `tg-mysql` isn't
 up; a PHP error page means `config.php` is missing/misconfigured.
 
+## French typography
+
+All user-facing French text (JSX text, `title`/`message`/`label` props, toast
+messages, aria-labels) must use a non-breaking space before `: ; ! ?`
+(standard French typography for "double" punctuation), never a plain space.
+
+- In raw JSX text (a direct text child, not a JS string), write the literal
+  `&nbsp;` entity — JSX decodes it: `Nombre de joueur·euse·s&nbsp;: {count}`.
+- Everywhere else (a JS string: `title="..."`, `message="..."`, a
+  `showToast(...)` call, a template literal, an aria-label) `&nbsp;` is NOT
+  decoded — it would render as the literal text "&nbsp;". Use the actual
+  U+00A0 character instead. It's visually indistinguishable from a regular
+  space in an editor, so verify with e.g.
+  `grep -oP ".{0,10}\xc2\xa0[:;!?]" file.jsx` (UTF-8 encodes U+00A0 as
+  `\xc2\xa0`) rather than trusting the diff view.
+
 ## New account notifications
 
 In production, every time a brand-new account is created (first

@@ -92,7 +92,7 @@ const ExportTeams = ({ teams, reset }) => {
 
       <ConfirmDialog
         open={isResetConfirmOpen}
-        title="Nouvelles équipes ?"
+        title="Nouvelles équipes ?"
         message="Cela efface la liste actuelle de joueur·euse·s et d'équipes."
         confirmLabel="Recommencer"
         onConfirm={() => {

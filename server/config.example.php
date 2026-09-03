@@ -24,8 +24,8 @@ return [
     'otp' => [
         'ttl_minutes' => 10,
         'max_attempts' => 5,
-        'min_seconds_between_requests' => 60,
-        'max_requests_per_hour' => 5,
+        'min_seconds_between_requests' => 30,
+        'max_requests_per_hour' => 10,
         // Echo the OTP code back in the request-otp response instead of
         // relying on mail() — only for local dev without a working mail
         // setup. MUST stay false on the deployed host.

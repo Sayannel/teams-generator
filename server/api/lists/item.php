@@ -14,49 +14,71 @@ if ($id === false || $id === null) {
     json_response(['error' => 'invalid_input'], 422);
 }
 
-$stmt = $pdo->prepare('SELECT id, name FROM tg_lists WHERE id = ? AND user_id = ?');
+$method = $_SERVER['REQUEST_METHOD'];
+
+// PUT/DELETE stay strictly owner-only: a public list is never
+// rename/toggle/delete-able by anyone but its owner, admin included.
+if ($method === 'PUT' || $method === 'DELETE') {
+    $stmt = $pdo->prepare('SELECT id, name, is_public FROM tg_lists WHERE id = ? AND user_id = ?');
+    $stmt->execute([$id, $user['id']]);
+    $list = $stmt->fetch();
+    if (!$list) {
+        json_response(['error' => 'not_found'], 404);
+    }
+
+    if ($method === 'DELETE') {
+        $pdo->prepare('DELETE FROM tg_lists WHERE id = ? AND user_id = ?')->execute([$id, $user['id']]);
+        json_response(['ok' => true]);
+    }
+
+    // PUT: rename / toggle isPublic.
+    $body = read_json_body();
+    $name = array_key_exists('name', $body) ? validate_name($body['name']) : $list['name'];
+    $isPublic = array_key_exists('isPublic', $body) ? (bool) $body['isPublic'] : (bool) $list['is_public'];
+
+    if ($name === null) {
+        json_response(['error' => 'invalid_input'], 422);
+    }
+
+    try {
+        $pdo->prepare('UPDATE tg_lists SET name = ?, is_public = ? WHERE id = ? AND user_id = ?')
+            ->execute([$name, $isPublic ? 1 : 0, $id, $user['id']]);
+    } catch (PDOException $e) {
+        if ($e->errorInfo[1] === 1062) {
+            json_response(['error' => 'list_name_taken'], 409);
+        }
+        throw $e;
+    }
+
+    json_response(['id' => $id, 'name' => $name, 'isPublic' => $isPublic]);
+}
+
+// GET: owner, or an admin viewing any is_public list.
+$stmt = $pdo->prepare('SELECT id, name, user_id, is_public FROM tg_lists WHERE id = ? AND (user_id = ? OR is_public = 1)');
 $stmt->execute([$id, $user['id']]);
 $list = $stmt->fetch();
 if (!$list) {
     json_response(['error' => 'not_found'], 404);
 }
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-if ($method === 'GET') {
-    $stmt = $pdo->prepare(
-        'SELECT p.id, p.name, p.gender, p.skill
-         FROM tg_list_players lp
-         JOIN tg_players p ON p.id = lp.player_id
-         WHERE lp.list_id = ?
-         ORDER BY p.name'
-    );
-    $stmt->execute([$id]);
-    $list['players'] = $stmt->fetchAll();
-    json_response($list);
+$isOwner = ((int) $list['user_id']) === (int) $user['id'];
+if (!$isOwner && $user['role'] !== 'admin') {
+    json_response(['error' => 'not_found'], 404);
 }
 
-if ($method === 'DELETE') {
-    $pdo->prepare('DELETE FROM tg_lists WHERE id = ? AND user_id = ?')->execute([$id, $user['id']]);
-    json_response(['ok' => true]);
-}
+$stmt = $pdo->prepare(
+    'SELECT p.id, p.name, p.gender, p.skill
+     FROM tg_list_players lp
+     JOIN tg_players p ON p.id = lp.player_id
+     WHERE lp.list_id = ?
+     ORDER BY p.name'
+);
+$stmt->execute([$id]);
 
-// PUT: rename.
-$body = read_json_body();
-$name = array_key_exists('name', $body) ? validate_name($body['name']) : $list['name'];
-
-if ($name === null) {
-    json_response(['error' => 'invalid_input'], 422);
-}
-
-try {
-    $pdo->prepare('UPDATE tg_lists SET name = ? WHERE id = ? AND user_id = ?')
-        ->execute([$name, $id, $user['id']]);
-} catch (PDOException $e) {
-    if ($e->errorInfo[1] === 1062) {
-        json_response(['error' => 'list_name_taken'], 409);
-    }
-    throw $e;
-}
-
-json_response(['id' => $id, 'name' => $name]);
+json_response([
+    'id' => (int) $list['id'],
+    'name' => $list['name'],
+    'isOwner' => $isOwner,
+    'isPublic' => (bool) $list['is_public'],
+    'players' => $stmt->fetchAll(),
+]);

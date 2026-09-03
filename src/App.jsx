@@ -255,6 +255,7 @@ const App = () => {
                     config={config}
                     setTeams={setTeams}
                     teams={teams}
+                    currentList={currentList}
                   />
                 )}
                 {step === STEPS_LIST.EXPORT_TEAMS && <ExportTeams teams={teams} reset={reset} />}

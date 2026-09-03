@@ -149,7 +149,7 @@ function maybe_cleanup_expired(): void
     $pdo->exec('DELETE FROM tg_otp_codes WHERE expires_at < NOW()');
 }
 
-/** Returns the current user (['id', 'email']) from the session cookie, or null. */
+/** Returns the current user (['id', 'email', 'role']) from the session cookie, or null. */
 function current_user(): ?array
 {
     maybe_cleanup_expired();
@@ -158,7 +158,7 @@ function current_user(): ?array
         return null;
     }
     $stmt = db()->prepare(
-        'SELECT u.id, u.email FROM tg_sessions s
+        'SELECT u.id, u.email, u.role FROM tg_sessions s
          JOIN tg_users u ON u.id = s.user_id
          WHERE s.token_hash = ? AND s.expires_at > NOW()'
     );
@@ -173,6 +173,16 @@ function require_auth(): array
     $user = current_user();
     if (!$user) {
         json_response(['error' => 'unauthorized'], 401);
+    }
+    return $user;
+}
+
+/** Returns the current user or halts with 403 if not an admin. */
+function require_admin(): array
+{
+    $user = require_auth();
+    if ($user['role'] !== 'admin') {
+        json_response(['error' => 'forbidden'], 403);
     }
     return $user;
 }

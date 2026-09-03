@@ -9,11 +9,13 @@ import PlayerDistributionSummary from '../components/PlayerDistributionSummary'
 import TeamSummary from '../components/TeamSummary'
 import { STEPS_LIST } from '../App'
 import { generateTeams as generateTeamsFromPlayers } from '../lib/teamGenerator'
+import { getPersistedPlayerIds } from '../lib/listSync'
+import { api } from '../lib/api'
 import BottomActionBar from '../components/ui/BottomActionBar'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/ToastProvider'
 
-const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) => {
+const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams, currentList }) => {
   const { showToast } = useToast()
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [balanceScore, setBalanceScore] = useState(null)
@@ -37,6 +39,16 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) =
     setIsRegenerateConfirmOpen(false)
     generateBestTeams()
     showToast('Nouvelle répartition générée.', 'success')
+  }
+
+  const handleValidateTeams = () => {
+    if (currentList) {
+      const playerIds = getPersistedPlayerIds(teams)
+      api
+        .recordAttendance(currentList.id, playerIds)
+        .catch(() => showToast("Impossible d'enregistrer la présence pour l'historique.", 'error'))
+    }
+    handleStepChange(STEPS_LIST.EXPORT_TEAMS)
   }
 
   const handlePlayerSwap = (teamIndex, playerIndex) => {
@@ -127,7 +139,7 @@ const GenerateTeams = ({ handleStepChange, players, config, teams, setTeams }) =
           </Stack>
           <Button
             variant="contained"
-            onClick={() => handleStepChange(STEPS_LIST.EXPORT_TEAMS)}
+            onClick={handleValidateTeams}
             sx={{ width: { xs: '100%', md: 'auto' }, flex: { md: 2 } }}
           >
             Valider les équipes

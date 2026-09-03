@@ -73,15 +73,32 @@ upload — it bypasses the point of the OTP.
 | GET    | `/api/lists/index.php`                     | cookie | –                                     |
 | POST   | `/api/lists/index.php`                     | cookie | `{name}`                              |
 | GET    | `/api/lists/item.php?id=`                  | cookie | –                                     |
-| PUT    | `/api/lists/item.php?id=`                  | cookie | `{name?}`                             |
+| PUT    | `/api/lists/item.php?id=`                  | cookie | `{name?, isPublic?}`                  |
 | DELETE | `/api/lists/item.php?id=`                  | cookie | –                                     |
 | POST   | `/api/lists/players.php`                   | cookie | `{listId, name, skill, gender}`       |
 | DELETE | `/api/lists/players.php?listId=&playerId=` | cookie | –                                     |
+| POST   | `/api/lists/attendance.php`                | cookie | `{listId, playerIds: [...]}`          |
+| GET    | `/api/lists/attendance.php?listId=`        | cookie | –                                     |
 | GET    | `/api/players/index.php?search=`           | cookie | –                                     |
 | PUT    | `/api/players/item.php?id=`                | cookie | `{name?, skill?, gender?}`            |
 
 All `lists`/`players` endpoints are scoped to the authenticated user — one
 person's data is never reachable with another person's session cookie.
+The exception is an `admin` user: on top of their own lists, they can also
+see every other account's `is_public = 1` list in `GET /api/lists/index.php`
+and fully manage its roster (`players.php`, `attendance.php`) — but renaming,
+deleting, or toggling `isPublic` on someone else's list stays owner-only,
+enforced by `PUT`/`DELETE /api/lists/item.php` regardless of role. Players an
+admin attaches to someone else's public list are created under that list's
+owner, never under the admin's own account.
+
+List mutation endpoints (`POST`/`PUT /api/lists/*.php`) now accept an
+optional `isPublic` boolean alongside `name`. There's no UI yet to promote an
+account to admin — do it locally/on a host with DB access via:
+
+```sql
+UPDATE tg_users SET role = 'admin' WHERE email = 'you@example.org';
+```
 
 ## Known limitation
 

@@ -14,8 +14,20 @@ if (!$id) {
     json_response(['error' => 'invalid_input'], 422);
 }
 
-$stmt = $pdo->prepare('SELECT id, name, gender, skill FROM tg_players WHERE id = ? AND user_id = ?');
-$stmt->execute([$id, $user['id']]);
+$stmt = $pdo->prepare(
+    "SELECT p.id, p.name, p.gender, p.skill
+     FROM tg_players p
+     WHERE p.id = ?
+       AND (
+         p.user_id = ?
+         OR (? = 'admin' AND EXISTS (
+           SELECT 1 FROM tg_list_players lp
+           JOIN tg_lists l ON l.id = lp.list_id
+           WHERE lp.player_id = p.id AND l.is_public = 1
+         ))
+       )"
+);
+$stmt->execute([$id, $user['id'], $user['role']]);
 $player = $stmt->fetch();
 if (!$player) {
     json_response(['error' => 'not_found'], 404);
@@ -35,8 +47,11 @@ if ($name === null || $skill === null || $gender === null) {
 }
 
 try {
-    $pdo->prepare('UPDATE tg_players SET name = ?, gender = ?, skill = ? WHERE id = ? AND user_id = ?')
-        ->execute([$name, $gender, $skill, $id, $user['id']]);
+    // Ownership (or admin-on-public-list) was already confirmed above, so
+    // the WHERE here doesn't repeat the user_id check — doing so would
+    // silently no-op the update for the admin-managing-a-public-list path.
+    $pdo->prepare('UPDATE tg_players SET name = ?, gender = ?, skill = ? WHERE id = ?')
+        ->execute([$name, $gender, $skill, $id]);
 } catch (PDOException $e) {
     if ($e->errorInfo[1] === 1062) {
         json_response(['error' => 'player_name_taken'], 409);

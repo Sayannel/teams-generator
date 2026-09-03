@@ -42,4 +42,8 @@ export const api = {
   updatePlayer: (id, patch) =>
     request(`/players/item.php?id=${id}`, { method: 'PUT', body: patch }),
   searchPlayers: (query) => request(`/players/index.php?search=${encodeURIComponent(query)}`),
+
+  recordAttendance: (listId, playerIds) =>
+    request('/lists/attendance.php', { method: 'POST', body: { listId, playerIds } }),
+  getAttendanceHistory: (listId) => request(`/lists/attendance.php?listId=${listId}`),
 }

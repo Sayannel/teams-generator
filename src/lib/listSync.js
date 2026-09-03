@@ -47,6 +47,19 @@ export function computeListDiff(savedRoster, currentPlayers, removedRosterIds = 
   return { toCreate, toUpdate, toDelete }
 }
 
+/**
+ * Flattens the generated `teams` (an array of arrays of player objects) into
+ * the ids of only the players persisted server-side — used to record
+ * attendance against a saved list's history once teams are validated.
+ * Client-only players (string id, never attached to the list) are excluded.
+ */
+export function getPersistedPlayerIds(teams) {
+  return teams
+    .flat()
+    .filter(hasServerId)
+    .map((p) => p.id)
+}
+
 export function isDiffEmpty(diff) {
   return diff.toCreate.length === 0 && diff.toUpdate.length === 0 && diff.toDelete.length === 0
 }

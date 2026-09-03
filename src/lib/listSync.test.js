@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { computeListDiff, isDiffEmpty, applyListDiff } from './listSync'
+import { computeListDiff, isDiffEmpty, applyListDiff, getPersistedPlayerIds } from './listSync'
 
 describe('computeListDiff', () => {
   const savedRoster = [
@@ -147,5 +147,23 @@ describe('applyListDiff', () => {
         created: new Map([['local-1', { id: 7, name: 'Chris', skill: 2, gender: 'male' }]]),
       },
     })
+  })
+})
+
+describe('getPersistedPlayerIds', () => {
+  it('flattens teams and keeps only players with a server (numeric) id', () => {
+    const teams = [
+      [
+        { id: 1, name: 'Alice' },
+        { id: crypto.randomUUID(), name: 'Guest' },
+      ],
+      [{ id: 2, name: 'Bob' }],
+    ]
+    expect(getPersistedPlayerIds(teams)).toEqual([1, 2])
+  })
+
+  it('returns an empty array when no team has any persisted player', () => {
+    const teams = [[{ id: crypto.randomUUID(), name: 'Guest' }], []]
+    expect(getPersistedPlayerIds(teams)).toEqual([])
   })
 })

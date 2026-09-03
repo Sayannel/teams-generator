@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ClipboardPaste,
+  History,
   Mars,
   Pencil,
   Plus,
@@ -26,6 +27,7 @@ import { useTheme } from '@mui/material/styles'
 import { api, ApiError } from '../lib/api'
 import Drawer from '../components/ui/Drawer'
 import ImportPanel from '../components/ImportPanel'
+import AttendanceHistory from '../components/AttendanceHistory'
 import NumberStepper from '../components/ui/NumberStepper'
 import GenderToggle from '../components/ui/GenderToggle'
 import { useToast } from '../components/ui/ToastProvider'
@@ -36,15 +38,20 @@ const emptyNewPlayer = { name: '', skill: 1, gender: 'male' }
  * Dedicated editor for a single saved list: rename it and manage its roster
  * in place (unlike the step-2 players table, every change here persists
  * immediately — there's no downstream "Valider" to batch a diff into).
+ *
+ * `canManageList` gates renaming/deleting/toggling visibility (owner-only).
+ * `canManageMembers` gates roster mutations — true for the owner and for an
+ * admin viewing someone else's public list.
  */
-const ListDetail = ({ listId, onBack }) => {
+const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = true }) => {
   const theme = useTheme()
   const { showToast } = useToast()
   const nameInputRef = useRef(null)
-  const [list, setList] = useState(null) // { id, name, players }
+  const [list, setList] = useState(null) // { id, name, players, isPublic, isOwner }
   const [name, setName] = useState('')
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [newPlayer, setNewPlayer] = useState(emptyNewPlayer)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [searchResults, setSearchResults] = useState([])
@@ -81,7 +88,14 @@ const ListDetail = ({ listId, onBack }) => {
   }, [newPlayer.name, selectedMatch, list])
 
   const goBack = () => {
-    if (list) onBack({ id: list.id, name: list.name, memberCount: list.players.length })
+    if (list)
+      onBack({
+        id: list.id,
+        name: list.name,
+        memberCount: list.players.length,
+        isPublic: list.isPublic,
+        isOwner: list.isOwner,
+      })
     else onBack(null)
   }
 
@@ -225,28 +239,34 @@ const ListDetail = ({ listId, onBack }) => {
         <IconButton onClick={goBack} aria-label="Retour à mes listes">
           <ArrowLeft size={20} />
         </IconButton>
-        <TextField
-          variant="standard"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitName}
-          fullWidth
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Pencil size={16} color={theme.palette.text.disabled} />
-                </InputAdornment>
-              ),
-              sx: {
-                fontSize: '1.5rem',
-                fontWeight: 600,
-                '&:before': { borderBottomColor: 'divider' },
+        {canManageList ? (
+          <TextField
+            variant="standard"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={commitName}
+            fullWidth
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Pencil size={16} color={theme.palette.text.disabled} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  '&:before': { borderBottomColor: 'divider' },
+                },
               },
-            },
-          }}
-          aria-label="Nom de la liste"
-        />
+            }}
+            aria-label="Nom de la liste"
+          />
+        ) : (
+          <Typography variant="h5" fontWeight={600} sx={{ flex: 1 }}>
+            {name}
+          </Typography>
+        )}
       </Stack>
 
       <Stack
@@ -269,18 +289,29 @@ const ListDetail = ({ listId, onBack }) => {
         />
         <Button
           variant="outlined"
-          startIcon={<ClipboardPaste size={16} />}
-          onClick={() => setIsImportOpen(true)}
+          startIcon={<History size={16} />}
+          onClick={() => setIsHistoryOpen(true)}
         >
-          Coller une liste
+          Historique
         </Button>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={16} />}
-          onClick={() => setIsAddOpen(true)}
-        >
-          Ajouter
-        </Button>
+        {canManageMembers && (
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<ClipboardPaste size={16} />}
+              onClick={() => setIsImportOpen(true)}
+            >
+              Coller une liste
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Plus size={16} />}
+              onClick={() => setIsAddOpen(true)}
+            >
+              Ajouter
+            </Button>
+          </>
+        )}
       </Stack>
 
       {sortedPlayers.length === 0 ? (
@@ -305,56 +336,74 @@ const ListDetail = ({ listId, onBack }) => {
         </Card>
       ) : (
         <Stack spacing={1}>
-          {sortedPlayers.map((player) => (
-            <Card key={player.id} variant="outlined" sx={{ p: 1.25 }}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                <TextField
-                  key={`${player.id}-${player.name}`}
-                  variant="standard"
-                  defaultValue={player.name}
-                  onBlur={(e) => commitPlayerName(player, e.target.value)}
-                  aria-label={`Nom de ${player.name}`}
-                  sx={{ flex: 1, minWidth: 120 }}
-                  slotProps={{ input: { disableUnderline: true, sx: { fontWeight: 500 } } }}
-                />
-                <NumberStepper
-                  value={player.skill}
-                  onChange={(v) => updatePlayerField(player, { skill: v })}
-                  label={`Niveau de ${player.name}`}
-                />
-                <Stack direction="row" spacing={0.5}>
+          {sortedPlayers.map((player) =>
+            canManageMembers ? (
+              <Card key={player.id} variant="outlined" sx={{ p: 1.25 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  <TextField
+                    key={`${player.id}-${player.name}`}
+                    variant="standard"
+                    defaultValue={player.name}
+                    onBlur={(e) => commitPlayerName(player, e.target.value)}
+                    aria-label={`Nom de ${player.name}`}
+                    sx={{ flex: 1, minWidth: 120 }}
+                    slotProps={{ input: { disableUnderline: true, sx: { fontWeight: 500 } } }}
+                  />
+                  <NumberStepper
+                    value={player.skill}
+                    onChange={(v) => updatePlayerField(player, { skill: v })}
+                    label={`Niveau de ${player.name}`}
+                  />
+                  <Stack direction="row" spacing={0.5}>
+                    <IconButton
+                      size="small"
+                      onClick={() => updatePlayerField(player, { gender: 'male' })}
+                      aria-pressed={player.gender === 'male'}
+                      aria-label={`${player.name} masculin`}
+                      color={player.gender === 'male' ? 'info' : 'default'}
+                      sx={{
+                        bgcolor: player.gender === 'male' ? 'action.selected' : 'transparent',
+                      }}
+                    >
+                      <Mars size={16} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => updatePlayerField(player, { gender: 'female' })}
+                      aria-pressed={player.gender === 'female'}
+                      aria-label={`${player.name} féminin`}
+                      color={player.gender === 'female' ? 'primary' : 'default'}
+                      sx={{
+                        bgcolor: player.gender === 'female' ? 'action.selected' : 'transparent',
+                      }}
+                    >
+                      <Venus size={16} />
+                    </IconButton>
+                  </Stack>
                   <IconButton
                     size="small"
-                    onClick={() => updatePlayerField(player, { gender: 'male' })}
-                    aria-pressed={player.gender === 'male'}
-                    aria-label={`${player.name} masculin`}
-                    color={player.gender === 'male' ? 'info' : 'default'}
-                    sx={{ bgcolor: player.gender === 'male' ? 'action.selected' : 'transparent' }}
+                    color="error"
+                    onClick={() => removePlayer(player)}
+                    aria-label={`Retirer ${player.name}`}
                   >
-                    <Mars size={16} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => updatePlayerField(player, { gender: 'female' })}
-                    aria-pressed={player.gender === 'female'}
-                    aria-label={`${player.name} féminin`}
-                    color={player.gender === 'female' ? 'primary' : 'default'}
-                    sx={{ bgcolor: player.gender === 'female' ? 'action.selected' : 'transparent' }}
-                  >
-                    <Venus size={16} />
+                    <Trash2 size={16} />
                   </IconButton>
                 </Stack>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => removePlayer(player)}
-                  aria-label={`Retirer ${player.name}`}
-                >
-                  <Trash2 size={16} />
-                </IconButton>
-              </Stack>
-            </Card>
-          ))}
+              </Card>
+            ) : (
+              <Card key={player.id} variant="outlined" sx={{ p: 1.25 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Typography fontWeight={500} sx={{ flex: 1, minWidth: 120 }}>
+                    {player.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    niveau {player.skill}
+                  </Typography>
+                  {player.gender === 'male' ? <Mars size={16} /> : <Venus size={16} />}
+                </Stack>
+              </Card>
+            )
+          )}
         </Stack>
       )}
 
@@ -454,6 +503,15 @@ const ListDetail = ({ listId, onBack }) => {
 
       <Drawer open={isImportOpen} title="Coller une liste" onClose={() => setIsImportOpen(false)}>
         <ImportPanel onImport={handleBulkImport} onClose={() => setIsImportOpen(false)} />
+      </Drawer>
+
+      <Drawer
+        open={isHistoryOpen}
+        title="Historique de présence"
+        onClose={() => setIsHistoryOpen(false)}
+        maxWidth="sm"
+      >
+        <AttendanceHistory listId={list.id} />
       </Drawer>
     </Box>
   )

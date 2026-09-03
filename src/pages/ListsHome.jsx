@@ -3,8 +3,10 @@ import { ArrowLeft, ClipboardList, Pencil, Plus, Trash2, Users } from 'lucide-re
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
+import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
@@ -68,6 +70,18 @@ const ListsHome = ({ onBack }) => {
     }
   }
 
+  const togglePublic = async (list, next) => {
+    setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, isPublic: next } : l)))
+    try {
+      await api.updateList(list.id, { isPublic: next })
+    } catch {
+      showToast('Impossible de mettre à jour cette liste.', 'error')
+      setLists((prev) =>
+        prev.map((l) => (l.id === list.id ? { ...l, isPublic: list.isPublic } : l))
+      )
+    }
+  }
+
   const handleDetailBack = (summary) => {
     if (summary) {
       setLists((prev) => prev.map((l) => (l.id === summary.id ? { ...l, ...summary } : l)))
@@ -76,7 +90,15 @@ const ListsHome = ({ onBack }) => {
   }
 
   if (editingId !== null) {
-    return <ListDetail listId={editingId} onBack={handleDetailBack} />
+    const editingList = lists?.find((l) => l.id === editingId)
+    return (
+      <ListDetail
+        listId={editingId}
+        onBack={handleDetailBack}
+        canManageList={editingList?.isOwner ?? true}
+        canManageMembers={true}
+      />
+    )
   }
 
   return (
@@ -171,7 +193,26 @@ const ListsHome = ({ onBack }) => {
                 </Stack>
               </Box>
 
-              <Stack direction="row" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{ alignItems: 'center', minWidth: 0, flexShrink: 0 }}
+              >
+                {list.isOwner ? (
+                  <Switch
+                    checked={!!list.isPublic}
+                    onChange={(e) => togglePublic(list, e.target.checked)}
+                    inputProps={{ 'aria-label': `Rendre publique ${list.name}` }}
+                  />
+                ) : (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`Public · ${list.ownerEmail}`}
+                    title={`Public · ${list.ownerEmail}`}
+                    sx={{ maxWidth: 160 }}
+                  />
+                )}
                 <IconButton
                   size="small"
                   onClick={() => setEditingId(list.id)}
@@ -179,14 +220,16 @@ const ListsHome = ({ onBack }) => {
                 >
                   <Pencil size={16} />
                 </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => setDeleteTarget(list)}
-                  aria-label={`Supprimer ${list.name}`}
-                >
-                  <Trash2 size={16} />
-                </IconButton>
+                {list.isOwner && (
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => setDeleteTarget(list)}
+                    aria-label={`Supprimer ${list.name}`}
+                  >
+                    <Trash2 size={16} />
+                  </IconButton>
+                )}
               </Stack>
             </Card>
           ))}

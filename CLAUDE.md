@@ -41,6 +41,16 @@ Expect `401 {"error":"unauthorized"}` — a `500` with `could not find
 driver` means `pdo_mysql` didn't finish compiling yet or `tg-mysql` isn't
 up; a PHP error page means `config.php` is missing/misconfigured.
 
+## New account notifications
+
+In production, every time a brand-new account is created (first
+`request-otp.php` call for an email never seen before), the super admin
+(`axel.gaillard91@gmail.com`, configured as `mail.super_admin_email`) must
+receive a notification email. See `notify_super_admin_new_account()` in
+`server/lib/mail.php`, called from `server/api/auth/request-otp.php` right
+after the new `tg_users` row is inserted, gated on `app_env === 'production'`
+so local/dev/test signups never trigger it.
+
 ## Pre-commit hook
 
 A Husky pre-commit hook (`.husky/pre-commit`) runs `lint-staged`, which

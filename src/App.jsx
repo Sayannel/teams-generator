@@ -224,7 +224,7 @@ const App = () => {
 
           <Container maxWidth="md" sx={{ py: 2 }}>
             {isManagingLists ? (
-              <ListsHome onBack={() => setIsManagingLists(false)} />
+              <ListsHome onBack={() => setIsManagingLists(false)} user={user} />
             ) : (
               <>
                 {step === STEPS_LIST.SETUP &&

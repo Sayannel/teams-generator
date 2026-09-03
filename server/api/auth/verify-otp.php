@@ -17,7 +17,7 @@ if ($email === null || strlen($code) !== 6) {
 $otpCfg = config('otp');
 $pdo = db();
 
-$stmt = $pdo->prepare('SELECT id FROM tg_users WHERE email = ?');
+$stmt = $pdo->prepare('SELECT id, role FROM tg_users WHERE email = ?');
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 if (!$user) {
@@ -63,4 +63,4 @@ $pdo->prepare('INSERT INTO tg_sessions (user_id, token_hash, expires_at) VALUES 
 
 set_session_cookie($token, $expiresAt);
 
-json_response(['ok' => true, 'user' => ['id' => $userId, 'email' => $email]]);
+json_response(['ok' => true, 'user' => ['id' => $userId, 'email' => $email, 'role' => $user['role']]]);

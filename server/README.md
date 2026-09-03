@@ -62,6 +62,11 @@ curl -i -b cookies.txt localhost:8080/api/auth/me.php
 Never set `dev_expose_code` to `true` in the `config.php` you actually
 upload — it bypasses the point of the OTP.
 
+`mail.super_admin_email` (set in `config.php`) receives a notification
+whenever a genuinely new account is created — production only (guarded by
+`app_env`), so local/dev signups don't trigger it. See
+`notify_super_admin_new_account()` in `lib/mail.php`.
+
 ## Endpoints
 
 | Method | Path                                       | Auth   | Body / query                          |

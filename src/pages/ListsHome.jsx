@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ClipboardList, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, ClipboardList, Plus, Trash2, Users } from 'lucide-react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
-import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
@@ -22,7 +21,7 @@ import ListDetail from './ListDetail'
  * this used to be a Drawer's content, now it's App's whole main area while
  * open (see App.jsx's isManagingLists).
  */
-const ListsHome = ({ onBack }) => {
+const ListsHome = ({ onBack, user }) => {
   const theme = useTheme()
   const [lists, setLists] = useState(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -70,18 +69,6 @@ const ListsHome = ({ onBack }) => {
     }
   }
 
-  const togglePublic = async (list, next) => {
-    setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, isPublic: next } : l)))
-    try {
-      await api.updateList(list.id, { isPublic: next })
-    } catch {
-      showToast('Impossible de mettre à jour cette liste.', 'error')
-      setLists((prev) =>
-        prev.map((l) => (l.id === list.id ? { ...l, isPublic: list.isPublic } : l))
-      )
-    }
-  }
-
   const handleDetailBack = (summary) => {
     if (summary) {
       setLists((prev) => prev.map((l) => (l.id === summary.id ? { ...l, ...summary } : l)))
@@ -96,6 +83,7 @@ const ListsHome = ({ onBack }) => {
         listId={editingId}
         onBack={handleDetailBack}
         canManageList={editingList?.isOwner ?? true}
+        canManageVisibility={(editingList?.isOwner ?? true) && user?.role === 'admin'}
         canManageMembers={true}
       />
     )
@@ -198,28 +186,45 @@ const ListsHome = ({ onBack }) => {
                 spacing={0.5}
                 sx={{ alignItems: 'center', minWidth: 0, flexShrink: 0 }}
               >
-                {list.isOwner ? (
-                  <Switch
-                    checked={!!list.isPublic}
-                    onChange={(e) => togglePublic(list, e.target.checked)}
-                    inputProps={{ 'aria-label': `Rendre publique ${list.name}` }}
-                  />
-                ) : (
+                {/* A non-admin's lists are always private and they have no
+                    way to change that — showing a status badge for them
+                    would just be UI with nothing behind it. */}
+                {(!list.isOwner || user?.role === 'admin') && (
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={`Public · ${list.ownerEmail}`}
-                    title={`Public · ${list.ownerEmail}`}
-                    sx={{ maxWidth: 160 }}
+                    icon={
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: list.isPublic ? 'success.main' : 'text.disabled',
+                        }}
+                      />
+                    }
+                    label={
+                      list.isOwner
+                        ? list.isPublic
+                          ? 'Publique'
+                          : 'Privée'
+                        : `Publique · ${list.ownerEmail}`
+                    }
+                    title={
+                      list.isOwner
+                        ? `Cette liste est ${list.isPublic ? 'publique' : 'privée'} — modifiable depuis la liste elle-même`
+                        : `Liste publique de ${list.ownerEmail}`
+                    }
+                    sx={{
+                      maxWidth: 160,
+                      height: 26,
+                      borderColor: 'divider',
+                      color: list.isPublic || !list.isOwner ? 'success.main' : 'text.secondary',
+                      '& .MuiChip-icon': { ml: '8px' },
+                      '& .MuiChip-label': { px: '8px' },
+                    }}
                   />
                 )}
-                <IconButton
-                  size="small"
-                  onClick={() => setEditingId(list.id)}
-                  aria-label={`Modifier ${list.name}`}
-                >
-                  <Pencil size={16} />
-                </IconButton>
                 {list.isOwner && (
                   <IconButton
                     size="small"

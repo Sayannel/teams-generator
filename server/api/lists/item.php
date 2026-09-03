@@ -40,6 +40,14 @@ if ($method === 'PUT' || $method === 'DELETE') {
         json_response(['error' => 'invalid_input'], 422);
     }
 
+    // Only an admin can manage visibility at all — a non-admin's lists stay
+    // private, full stop. Force it false rather than merely rejecting an
+    // explicit true, so a list that somehow ended up public (e.g. its
+    // owner was demoted from admin) gets corrected on the next rename too.
+    if ($user['role'] !== 'admin') {
+        $isPublic = false;
+    }
+
     try {
         $pdo->prepare('UPDATE tg_lists SET name = ?, is_public = ? WHERE id = ? AND user_id = ?')
             ->execute([$name, $isPublic ? 1 : 0, $id, $user['id']]);

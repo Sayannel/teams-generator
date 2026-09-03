@@ -35,5 +35,8 @@ return [
     'mail' => [
         'from_email' => 'noreply@example.org',
         'from_name' => 'Teams Generator',
+        // Notified by email every time a new account signs up — production
+        // only, see notify_super_admin_new_account() in lib/mail.php.
+        'super_admin_email' => 'axel.gaillard91@gmail.com',
     ],
 ];

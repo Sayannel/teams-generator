@@ -34,6 +34,14 @@ if ($user) {
         $stmt->execute([$email]);
         $userId = (int) $stmt->fetch()['id'];
     }
+
+    // Production-only: dev/local signups (test accounts, seeded fixtures)
+    // shouldn't page the super admin every time.
+    if (config('app_env') === 'production') {
+        if (!notify_super_admin_new_account($email)) {
+            error_log("[teams-generator] notify_super_admin_new_account() returned false for {$email}");
+        }
+    }
 }
 
 // Throttle: minimum interval between requests, and a per-hour cap. Compared

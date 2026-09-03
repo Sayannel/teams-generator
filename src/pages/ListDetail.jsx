@@ -21,6 +21,7 @@ import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
@@ -43,7 +44,13 @@ const emptyNewPlayer = { name: '', skill: 1, gender: 'male' }
  * `canManageMembers` gates roster mutations — true for the owner and for an
  * admin viewing someone else's public list.
  */
-const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = true }) => {
+const ListDetail = ({
+  listId,
+  onBack,
+  canManageList = true,
+  canManageVisibility = true,
+  canManageMembers = true,
+}) => {
   const theme = useTheme()
   const { showToast } = useToast()
   const nameInputRef = useRef(null)
@@ -52,6 +59,7 @@ const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = t
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [pendingPublic, setPendingPublic] = useState(null) // null = closed, else the target value
   const [newPlayer, setNewPlayer] = useState(emptyNewPlayer)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [searchResults, setSearchResults] = useState([])
@@ -113,6 +121,20 @@ const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = t
       const isTaken = error instanceof ApiError && error.data?.error === 'list_name_taken'
       showToast(isTaken ? 'Ce nom de liste existe déjà.' : 'Une erreur est survenue.', 'error')
       setName(list.name)
+    }
+  }
+
+  const closeVisibilityConfirm = () => setPendingPublic(null)
+
+  const confirmVisibilityChange = async () => {
+    const next = pendingPublic
+    setPendingPublic(null)
+    try {
+      const updated = await api.updateList(list.id, { isPublic: next })
+      setList((prev) => ({ ...prev, isPublic: updated.isPublic }))
+      showToast(next ? 'Liste rendue publique.' : 'Liste rendue privée.', 'success')
+    } catch {
+      showToast('Impossible de mettre à jour la visibilité.', 'error')
     }
   }
 
@@ -271,22 +293,77 @@ const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = t
 
       <Stack
         direction="row"
-        spacing={1}
-        sx={{ mb: 2, alignItems: 'center', justifyContent: 'flex-end' }}
+        spacing={1.5}
+        sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}
       >
+        {canManageVisibility ? (
+          // The switch already carries the current state (position + label) —
+          // a separate status badge next to it would just repeat it. That
+          // badge only earns its place below, for someone who has no switch
+          // to read the state off of.
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Switch
+              checked={!!list.isPublic}
+              onChange={(e) => setPendingPublic(e.target.checked)}
+              inputProps={{
+                'aria-label': list.isPublic
+                  ? 'Rendre cette liste privée'
+                  : 'Rendre cette liste publique',
+              }}
+            />
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              color={list.isPublic ? 'success.main' : 'text.secondary'}
+            >
+              Liste {list.isPublic ? 'publique' : 'privée'}
+            </Typography>
+          </Stack>
+        ) : list.isOwner ? null : (
+          <Chip
+            size="small"
+            variant="outlined"
+            icon={
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: list.isPublic ? 'success.main' : 'text.disabled',
+                }}
+              />
+            }
+            label={list.isPublic ? 'Publique' : 'Privée'}
+            sx={{
+              height: 26,
+              borderColor: 'divider',
+              color: list.isPublic ? 'success.main' : 'text.secondary',
+              '& .MuiChip-icon': { ml: '8px' },
+              '& .MuiChip-label': { px: '8px' },
+            }}
+          />
+        )}
         <Chip
           variant="outlined"
           icon={<Users size={14} />}
           label={sortedPlayers.length}
           sx={{
             flexShrink: 0,
-            height: 44,
+            height: 32,
             px: 1,
             borderColor: 'divider',
             color: 'text.secondary',
             '& .MuiChip-icon': { color: 'text.secondary' },
           }}
         />
+      </Stack>
+
+      <Stack
+        direction="row"
+        useFlexGap
+        spacing={1}
+        sx={{ mb: 2, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}
+      >
         <Button
           variant="outlined"
           startIcon={<History size={16} />}
@@ -512,6 +589,65 @@ const ListDetail = ({ listId, onBack, canManageList = true, canManageMembers = t
         maxWidth="sm"
       >
         <AttendanceHistory listId={list.id} />
+      </Drawer>
+
+      <Drawer
+        open={pendingPublic !== null}
+        title={pendingPublic ? 'Rendre cette liste publique ?' : 'Rendre cette liste privée ?'}
+        onClose={closeVisibilityConfirm}
+      >
+        <Stack spacing={2}>
+          {pendingPublic ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Les comptes <strong>admin</strong> de l'app pourront voir « {list.name} » et gérer
+                son roster (ajouter, retirer, modifier des joueur·euses).
+              </Typography>
+              <Box
+                component="ul"
+                sx={{ m: 0, pl: 2.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}
+              >
+                <Typography component="li" variant="body2" color="text.secondary">
+                  Tu restes seul·e à pouvoir la renommer, la supprimer ou la repasser en privé.
+                </Typography>
+                <Typography component="li" variant="body2" color="text.secondary">
+                  Les joueur·euses ajouté·es par un admin restent dans ton répertoire personnel, pas
+                  le sien.
+                </Typography>
+                <Typography component="li" variant="body2" color="text.secondary">
+                  Aucun lien public n'est créé&nbsp;: il faut être connecté avec un compte admin
+                  pour la voir.
+                </Typography>
+              </Box>
+            </>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Les comptes admin qui géraient « {list.name} » perdront immédiatement l'accès à son
+                roster.
+              </Typography>
+              <Box
+                component="ul"
+                sx={{ m: 0, pl: 2.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}
+              >
+                <Typography component="li" variant="body2" color="text.secondary">
+                  Toi seul·e continueras à la voir et à la modifier.
+                </Typography>
+                <Typography component="li" variant="body2" color="text.secondary">
+                  L'historique de présence déjà enregistré est conservé.
+                </Typography>
+              </Box>
+            </>
+          )}
+          <Stack direction="row" spacing={1.5}>
+            <Button variant="outlined" fullWidth onClick={closeVisibilityConfirm}>
+              Annuler
+            </Button>
+            <Button variant="contained" fullWidth onClick={confirmVisibilityChange}>
+              {pendingPublic ? 'Rendre publique' : 'Rendre privée'}
+            </Button>
+          </Stack>
+        </Stack>
       </Drawer>
     </Box>
   )

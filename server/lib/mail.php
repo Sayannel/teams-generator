@@ -33,3 +33,31 @@ function send_otp_email(string $to, string $code): bool
 
     return mail($to, $subject, $body, $headers);
 }
+
+/**
+ * Notifies the super admin by email whenever a new account is created.
+ * Production-only (see call site in request-otp.php) — local/dev signups
+ * shouldn't spam the super admin's inbox.
+ */
+function notify_super_admin_new_account(string $newUserEmail): bool
+{
+    $mailCfg = config('mail');
+    $to = $mailCfg['super_admin_email'] ?? null;
+    if ($to === null || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        error_log('[teams-generator] mail.super_admin_email is missing/invalid — skipping new account notification');
+        return false;
+    }
+
+    $subject = mb_encode_mimeheader('Nouveau compte créé', 'UTF-8', 'B', "\r\n");
+    $fromName = mb_encode_mimeheader($mailCfg['from_name'], 'UTF-8', 'B', "\r\n");
+
+    $body = "Un nouveau compte vient d'être créé sur le générateur d'équipes\u{00A0}: {$newUserEmail}\n";
+
+    $headers = implode("\r\n", [
+        sprintf('From: %s <%s>', $fromName, $mailCfg['from_email']),
+        'Content-Type: text/plain; charset=UTF-8',
+        'X-Mailer: PHP/' . phpversion(),
+    ]);
+
+    return mail($to, $subject, $body, $headers);
+}

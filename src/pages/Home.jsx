@@ -158,7 +158,7 @@ const Home = ({ onStartNewSession, onResumeList, onManageLists }) => {
       )}
 
       <Button
-        variant="outlined"
+        variant="contained"
         fullWidth
         size="large"
         startIcon={<ListChecks size={18} />}

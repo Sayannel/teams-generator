@@ -654,6 +654,12 @@ const PlayersList = ({
               fullWidth
               placeholder="Nom du joueur·euse"
               value={newPlayer.name}
+              // On mobile this puts an explicit "OK"/"Envoyer" action on the
+              // virtual keyboard instead of a generic return key, so someone
+              // can submit straight from the keyboard without ever having to
+              // reach the controls it may be covering (Android's overlay
+              // keyboards don't reliably resize the viewport to reveal them).
+              slotProps={{ htmlInput: { enterKeyHint: 'done' } }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddNewPlayer()
               }}
@@ -747,15 +753,22 @@ const PlayersList = ({
             />
           </Stack>
 
-          <Button
-            variant="contained"
-            fullWidth
-            startIcon={<Plus size={16} />}
-            onClick={handleAddNewPlayer}
-            disabled={newPlayer.name.trim() === ''}
-          >
-            Ajouter
-          </Button>
+          {/* Sticky rather than just the last item in the stack: on a
+              mobile keyboard that overlays instead of resizing the
+              viewport (Android Firefox), the primary action stays
+              reachable with a short scroll instead of being hidden below
+              the fold behind Niveau/Genre. */}
+          <Box sx={{ position: 'sticky', bottom: 0, bgcolor: 'background.paper', pt: 1.5 }}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<Plus size={16} />}
+              onClick={handleAddNewPlayer}
+              disabled={newPlayer.name.trim() === ''}
+            >
+              Ajouter
+            </Button>
+          </Box>
         </Stack>
       </Drawer>
 

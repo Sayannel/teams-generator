@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, History, Search } from 'lucide-react'
+import { CalendarClock, History, Mars, Search, Venus } from 'lucide-react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -26,6 +26,10 @@ const formatSessionDate = (isoDate) =>
 const STATS_COLLAPSED_COUNT = 10
 const STATS_SEARCH_THRESHOLD = 15
 const ATTENDEES_COLLAPSED_COUNT = 8
+
+// Same convention as PlayerDistributionSummary: Venus/Mars + these colors
+// are how the rest of the app marks gender.
+const GENDER_COLORS = { female: '#f43f5e', male: '#6366f1' }
 
 /**
  * "Présence" history for a saved list: a per-player attendance-rate summary
@@ -206,13 +210,15 @@ const AttendanceHistory = ({ listId }) => {
               ? session.attendees
               : session.attendees.slice(0, ATTENDEES_COLLAPSED_COUNT)
             const hiddenAttendeesCount = session.attendees.length - visibleAttendees.length
+            const presentCount = session.degraded ? session.presentCount : session.attendees.length
+            const hasGenderBreakdown = session.maleCount != null && session.femaleCount != null
 
             return (
               <Card key={session.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Stack
                   direction="row"
                   spacing={1}
-                  sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}
+                  sx={{ alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}
                 >
                   <Stack
                     direction="row"
@@ -224,31 +230,55 @@ const AttendanceHistory = ({ listId }) => {
                       {formatSessionDate(session.occurredAt)}
                     </Typography>
                   </Stack>
-                  <Typography variant="body2" fontWeight={600} color="text.secondary">
-                    {session.attendees.length} présent·e{session.attendees.length > 1 ? 's' : ''}
+                  <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
+                    <Typography variant="body2" fontWeight={600} color="text.secondary">
+                      {presentCount} présent·e{presentCount > 1 ? 's' : ''}
+                    </Typography>
+                    {hasGenderBreakdown && (
+                      <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={0.375} sx={{ alignItems: 'center' }}>
+                          <Venus size={12} style={{ flexShrink: 0, color: GENDER_COLORS.female }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {session.femaleCount}
+                          </Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={0.375} sx={{ alignItems: 'center' }}>
+                          <Mars size={12} style={{ flexShrink: 0, color: GENDER_COLORS.male }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {session.maleCount}
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Stack>
+                {session.degraded ? (
+                  <Typography variant="caption" color="text.secondary">
+                    Détail anonymisé au-delà d'un mois
                   </Typography>
-                </Stack>
-                <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                  {visibleAttendees.map((attendee) => (
-                    <Chip key={attendee.id} size="small" label={attendee.name} />
-                  ))}
-                  {hiddenAttendeesCount > 0 && (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={`+${hiddenAttendeesCount} autres`}
-                      onClick={() => toggleSessionExpanded(session.id)}
-                    />
-                  )}
-                  {isExpanded && session.attendees.length > ATTENDEES_COLLAPSED_COUNT && (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label="Réduire"
-                      onClick={() => toggleSessionExpanded(session.id)}
-                    />
-                  )}
-                </Stack>
+                ) : (
+                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                    {visibleAttendees.map((attendee) => (
+                      <Chip key={attendee.id} size="small" label={attendee.name} />
+                    ))}
+                    {hiddenAttendeesCount > 0 && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`+${hiddenAttendeesCount} autres`}
+                        onClick={() => toggleSessionExpanded(session.id)}
+                      />
+                    )}
+                    {isExpanded && session.attendees.length > ATTENDEES_COLLAPSED_COUNT && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label="Réduire"
+                        onClick={() => toggleSessionExpanded(session.id)}
+                      />
+                    )}
+                  </Stack>
+                )}
               </Card>
             )
           })}

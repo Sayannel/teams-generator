@@ -10,7 +10,7 @@ $user = require_auth();
 $pdo = db();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    if ($user['role'] === 'admin') {
+    if (can_manage_public_lists($user)) {
         $stmt = $pdo->prepare(
             'SELECT l.id, l.name, l.is_public AS isPublic,
                     (l.user_id = ?) AS isOwner,

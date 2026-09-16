@@ -10,17 +10,17 @@ $user = require_auth();
 $pdo = db();
 
 /**
- * Confirms the list belongs to the current user, or is a public list an
- * admin is managing, or halts with 404. Returns the list's owner user_id
- * (which is what player rows must be created/reused/attached under —
- * never the admin's own id when managing someone else's public list).
+ * Confirms the list belongs to the current user, or is a public list a
+ * coach/admin is managing, or halts with 404. Returns the list's owner
+ * user_id (which is what player rows must be created/reused/attached under
+ * — never the caller's own id when managing someone else's public list).
  */
 function require_owned_list(PDO $pdo, int $listId, array $user): int
 {
     $stmt = $pdo->prepare(
-        "SELECT user_id FROM tg_lists WHERE id = ? AND (user_id = ? OR (is_public = 1 AND ? = 'admin'))"
+        'SELECT user_id FROM tg_lists WHERE id = ? AND (user_id = ? OR (is_public = 1 AND ? = 1))'
     );
-    $stmt->execute([$listId, $user['id'], $user['role']]);
+    $stmt->execute([$listId, $user['id'], can_manage_public_lists($user) ? 1 : 0]);
     $list = $stmt->fetch();
     if (!$list) {
         json_response(['error' => 'not_found'], 404);

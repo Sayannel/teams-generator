@@ -39,4 +39,25 @@ return [
         // only, see notify_super_admin_new_account() in lib/mail.php.
         'super_admin_email' => 'axel.gaillard91@gmail.com',
     ],
+
+    'retention' => [
+        // Age (from tg_list_sessions.occurred_at) at which nominative
+        // attendance is sealed with the public key below and the
+        // tg_session_attendees rows are deleted, leaving only aggregate
+        // counts — see lib/retention.php.
+        'degrade_after_days' => 30,
+        // Age at which the sealed blob itself is destroyed for good —
+        // after this, nobody, including the private key holder, can
+        // recover who attended; only the aggregate counts remain.
+        'anonymize_after_days' => 365,
+        // Below this many people of a given sex present, the male/female
+        // breakdown is withheld (small-group re-identification risk) —
+        // presentCount still shows.
+        'gender_breakdown_min_count' => 3,
+        // sodium_crypto_box public key, base64-encoded — generate a pair
+        // with `php -r 'analogous one-liner in README', give this half to
+        // config.php, keep the private half offline with the club's
+        // designated "responsable", never in this repo or on the host.
+        'encryption_public_key' => 'change_me',
+    ],
 ];

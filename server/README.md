@@ -18,8 +18,9 @@ shared host).
    Leave `app_env` as `production` and `otp.dev_expose_code` as `false`.
    `config.php` is gitignored — it never gets committed, only uploaded.
 3. **Upload**: FTP the _contents_ of this directory (`api/`, `lib/`,
-   `config.php`) to wherever the frontend is served from — **not**
-   `schema.sql`, which has already done its job in phpMyAdmin; unlike
+   `cron/`, `config.php`) to wherever the frontend is served from — **not**
+   `schema.sql` or `tools/` (see "Retention & encryption" below), which have
+   already done their job locally; unlike
    `config.php` it's a plain static file, so leaving it in a web-servable
    directory would let anyone fetch it and read the full table/column
    layout. Upload so that `api/auth/request-otp.php` resolves at
@@ -89,21 +90,89 @@ whenever a genuinely new account is created — production only (guarded by
 
 All `lists`/`players` endpoints are scoped to the authenticated user — one
 person's data is never reachable with another person's session cookie.
-The exception is an `admin` user: on top of their own lists, they can also
-see every other account's `is_public = 1` list in `GET /api/lists/index.php`
-and fully manage its roster (`players.php`, `attendance.php`) — but renaming,
-deleting, or toggling `isPublic` on someone else's list stays owner-only,
-enforced by `PUT`/`DELETE /api/lists/item.php` regardless of role. Players an
-admin attaches to someone else's public list are created under that list's
-owner, never under the admin's own account.
 
-List mutation endpoints (`POST`/`PUT /api/lists/*.php`) now accept an
-optional `isPublic` boolean alongside `name`. There's no UI yet to promote an
-account to admin — do it locally/on a host with DB access via:
+## Roles
+
+Three tiers, `tg_users.role`:
+
+- **`member`** (default): own lists only, always private. No visibility into
+  anyone else's data.
+- **`coach`**: `member` + can create/toggle `isPublic` lists and manage the
+  roster (`players.php`, `attendance.php`) of _any_ `is_public = 1` list, not
+  just their own — same as `admin` for those endpoints. The one place a
+  coach is more restricted than an admin: `GET /api/lists/attendance.php`
+  only returns the history of sessions **they personally recorded**
+  (`tg_list_sessions.recorded_by`), not every session anyone ever ran on
+  that list.
+- **`admin`**: `coach` + sees every public list's full attendance history
+  regardless of who recorded it. Still subject to the same retention
+  degradation as everyone else (see below) — admin is not an exemption from
+  it, only from the "my own sessions" scoping.
+
+Whichever role, renaming, deleting, or toggling `isPublic` on someone else's
+list stays strictly owner-only, enforced by `PUT`/`DELETE /api/lists/item.php`
+regardless of role. Players a coach/admin attaches to someone else's public
+list are created under that list's owner, never under their own account. A
+member's own lists are never visible to a coach or admin, public-list
+handling or not.
+
+List mutation endpoints (`POST`/`PUT /api/lists/*.php`) accept an optional
+`isPublic` boolean alongside `name` (silently forced to `false` for a plain
+`member`). There's no UI yet to change roles — do it locally/on a host with
+DB access via:
 
 ```sql
-UPDATE tg_users SET role = 'admin' WHERE email = 'you@example.org';
+UPDATE tg_users SET role = 'coach' WHERE email = 'coach@example.org';
+UPDATE tg_users SET role = 'admin' WHERE email = 'responsable@example.org';
 ```
+
+## Retention & encryption
+
+Attendance history degrades by age, regardless of who's looking — see
+`lib/retention.php`. Two ways this actually runs:
+
+- **Opportunistic** (default, needs no host feature): `maybe_cleanup_expired()`
+  in `bootstrap.php` runs it on ~1% of requests — same mechanism that
+  already existed there for expired sessions/OTP codes, for the same reason
+  (FTP/SFTP-only host, no SSH, no cron access assumed).
+- **Real cron**, if the hosting panel offers a task scheduler that can run a
+  PHP script directly (common even without SSH — e.g. alongside a
+  WordPress install on the same account): point it at `cron/run-retention.php`,
+  once a day. That script is CLI-only (refuses with 403 over HTTP, since it
+  still lives in the uploaded, web-servable tree) and processes a larger
+  batch per run than the opportunistic path. If this is available, prefer
+  it — it's deterministic instead of probabilistic.
+
+1. **< `retention.degrade_after_days`** (30 by default): full nominative
+   history, as returned today.
+2. **≥ that age**: the `tg_session_attendees` rows are deleted; the names
+   are sealed with `sodium_crypto_box_seal()` into
+   `tg_list_sessions.encrypted_attendees` using the public key in
+   `config.php`'s `retention.encryption_public_key`. The API never decrypts
+   this — only `present_count`/`male_count`/`female_count` are exposed
+   (and the male/female split only above `retention.gender_breakdown_min_count`
+   per sex, to avoid re-identifying people in small groups).
+3. **≥ `retention.anonymize_after_days`** (365 by default): the sealed blob
+   itself is wiped (`encrypted_attendees = NULL`). Nobody — including the
+   private key holder — can recover who attended past this point; only the
+   aggregate counts remain.
+
+The private key that pairs with `retention.encryption_public_key` is
+**never stored in this repo or on the host**. Generate a pair once:
+
+```sh
+php -r '$kp = sodium_crypto_box_keypair();
+echo "PUBLIC="  . base64_encode(sodium_crypto_box_publickey($kp)) . "\n";
+echo "PRIVATE=" . base64_encode(sodium_crypto_box_secretkey($kp)) . "\n";'
+```
+
+Put `PUBLIC` in `config.php`. Give `PRIVATE` only to the club's designated
+_responsable_ (the person accountable for handling a dispute/legal claim
+about attendance), who keeps it offline. If it's ever needed, export the
+`encrypted_attendees` blob for the session in question (phpMyAdmin) and run
+`tools/decrypt-session.php <private-key> <blob-file>` — a script that never
+gets uploaded to the host (see "Deploy" above) and never touches the
+database itself, on purpose.
 
 ## Known limitation
 

@@ -118,3 +118,35 @@ CREATE TABLE tg_session_attendees (
   CONSTRAINT fk_sa_session FOREIGN KEY (session_id) REFERENCES tg_list_sessions (id) ON DELETE CASCADE,
   CONSTRAINT fk_sa_player FOREIGN KEY (player_id) REFERENCES tg_players (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Migration: role-scoped attendance history + time-based retention.
+-- Import manually via phpMyAdmin against an already-deployed database.
+
+-- Three tiers: 'member' (own lists only) < 'coach' (public lists, but only
+-- sees the attendance history of sessions they personally recorded) <
+-- 'admin' (sees every public list's history, still subject to the same
+-- retention degradation below — admin is not exempt from it).
+ALTER TABLE tg_users
+  MODIFY COLUMN role ENUM('member', 'coach', 'admin') NOT NULL DEFAULT 'member';
+
+-- Who recorded a given session — lets a coach's history view be scoped to
+-- "sessions I ran" rather than every session on a public list they can
+-- otherwise manage. NULL for sessions recorded before this column existed,
+-- or after the recording account was deleted; such sessions are admin-only.
+ALTER TABLE tg_list_sessions
+  ADD COLUMN recorded_by INT UNSIGNED NULL AFTER list_id,
+  ADD CONSTRAINT fk_ls_recorded_by FOREIGN KEY (recorded_by) REFERENCES tg_users (id) ON DELETE SET NULL;
+
+-- Retention state for a session, degraded by age regardless of who's
+-- looking (owner, coach or admin) — see lib/retention.php. present_count /
+-- male_count / female_count are computed once, at degrade time, from the
+-- (about to be deleted) tg_session_attendees rows, and survive past
+-- anonymization; encrypted_attendees is the only thing anonymization wipes.
+ALTER TABLE tg_list_sessions
+  ADD COLUMN present_count SMALLINT UNSIGNED NULL AFTER occurred_at,
+  ADD COLUMN male_count SMALLINT UNSIGNED NULL AFTER present_count,
+  ADD COLUMN female_count SMALLINT UNSIGNED NULL AFTER male_count,
+  ADD COLUMN encrypted_attendees MEDIUMBLOB NULL AFTER female_count,
+  ADD COLUMN degraded_at DATETIME NULL AFTER encrypted_attendees,
+  ADD COLUMN anonymized_at DATETIME NULL AFTER degraded_at,
+  ADD KEY idx_session_retention (occurred_at, degraded_at, anonymized_at);

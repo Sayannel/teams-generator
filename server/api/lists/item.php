@@ -40,11 +40,12 @@ if ($method === 'PUT' || $method === 'DELETE') {
         json_response(['error' => 'invalid_input'], 422);
     }
 
-    // Only an admin can manage visibility at all — a non-admin's lists stay
-    // private, full stop. Force it false rather than merely rejecting an
-    // explicit true, so a list that somehow ended up public (e.g. its
-    // owner was demoted from admin) gets corrected on the next rename too.
-    if ($user['role'] !== 'admin') {
+    // Only a coach or admin can manage visibility at all — a plain
+    // member's lists stay private, full stop. Force it false rather than
+    // merely rejecting an explicit true, so a list that somehow ended up
+    // public (e.g. its owner was demoted to member) gets corrected on the
+    // next rename too.
+    if (!can_manage_public_lists($user)) {
         $isPublic = false;
     }
 
@@ -70,7 +71,7 @@ if (!$list) {
 }
 
 $isOwner = ((int) $list['user_id']) === (int) $user['id'];
-if (!$isOwner && $user['role'] !== 'admin') {
+if (!$isOwner && !can_manage_public_lists($user)) {
     json_response(['error' => 'not_found'], 404);
 }
 

@@ -147,6 +147,8 @@ function maybe_cleanup_expired(): void
     $pdo = db();
     $pdo->exec('DELETE FROM tg_sessions WHERE expires_at < NOW()');
     $pdo->exec('DELETE FROM tg_otp_codes WHERE expires_at < NOW()');
+    require_once __DIR__ . '/retention.php';
+    run_retention_job($pdo);
 }
 
 /** Returns the current user (['id', 'email', 'role']) from the session cookie, or null. */
@@ -185,4 +187,10 @@ function require_admin(): array
         json_response(['error' => 'forbidden'], 403);
     }
     return $user;
+}
+
+/** True for the two roles allowed to create/manage public lists: coach and admin. */
+function can_manage_public_lists(array $user): bool
+{
+    return in_array($user['role'], ['coach', 'admin'], true);
 }

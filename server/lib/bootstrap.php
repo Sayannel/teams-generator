@@ -137,7 +137,10 @@ function clear_session_cookie(): void
 /**
  * Opportunistically prunes expired sessions/OTP codes instead of running a
  * cron the shared host may not offer. ~1% chance per call keeps the cost off
- * the hot path while still bounding table growth over time.
+ * the hot path while still bounding table growth over time. Only reachable
+ * from authenticated endpoints (via current_user()) — fine for this cleanup,
+ * but that's exactly why attendance retention (below) is triggered
+ * differently, from every request instead.
  */
 function maybe_cleanup_expired(): void
 {
@@ -147,8 +150,6 @@ function maybe_cleanup_expired(): void
     $pdo = db();
     $pdo->exec('DELETE FROM tg_sessions WHERE expires_at < NOW()');
     $pdo->exec('DELETE FROM tg_otp_codes WHERE expires_at < NOW()');
-    require_once __DIR__ . '/retention.php';
-    run_retention_job($pdo);
 }
 
 /** Returns the current user (['id', 'email', 'role']) from the session cookie, or null. */
@@ -194,3 +195,12 @@ function can_manage_public_lists(array $user): bool
 {
     return in_array($user['role'], ['coach', 'admin'], true);
 }
+
+// Runs the attendance-retention job on the first request of each calendar
+// day — unconditionally here (not gated behind require_auth/current_user
+// like maybe_cleanup_expired above) so even an anonymous request-otp.php
+// hit before anyone logs in can be the one that triggers it. See
+// maybe_run_daily_retention() in retention.php for why a cron-less host is
+// fine with this.
+require_once __DIR__ . '/retention.php';
+maybe_run_daily_retention(db());

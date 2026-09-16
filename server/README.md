@@ -131,17 +131,22 @@ UPDATE tg_users SET role = 'admin' WHERE email = 'responsable@example.org';
 Attendance history degrades by age, regardless of who's looking — see
 `lib/retention.php`. Two ways this actually runs:
 
-- **Opportunistic** (default, needs no host feature): `maybe_cleanup_expired()`
-  in `bootstrap.php` runs it on ~1% of requests — same mechanism that
-  already existed there for expired sessions/OTP codes, for the same reason
-  (FTP/SFTP-only host, no SSH, no cron access assumed).
-- **Real cron**, if the hosting panel offers a task scheduler that can run a
-  PHP script directly (common even without SSH — e.g. alongside a
-  WordPress install on the same account): point it at `cron/run-retention.php`,
-  once a day. That script is CLI-only (refuses with 403 over HTTP, since it
-  still lives in the uploaded, web-servable tree) and processes a larger
-  batch per run than the opportunistic path. If this is available, prefer
-  it — it's deterministic instead of probabilistic.
+- **Daily gate** (default, needs no host feature): `maybe_run_daily_retention()`,
+  called unconditionally at the bottom of `bootstrap.php` — so on every
+  request, authenticated or not (unlike `maybe_cleanup_expired()`'s 1%
+  chance, which only fires from endpoints that check a session). It checks
+  a single-row table (`tg_retention_state.last_run_date`) and does nothing
+  once that day's run has already happened; the first request of a new
+  calendar day runs the full job. Deterministic (once a day, guaranteed, as
+  long as the site gets any traffic that day) without needing cron access
+  at all.
+- **Real cron**, if the hosting panel happens to offer a task scheduler that
+  can run a PHP script directly (common even without SSH — e.g. alongside a
+  WordPress install on the same account): point it at `cron/run-retention.php`.
+  That script is CLI-only (refuses with 403 over HTTP, since it still lives
+  in the uploaded, web-servable tree). Purely optional on top of the daily
+  gate above — both call the same idempotent functions, so running both
+  causes no harm, just some redundant work on days both fire.
 
 1. **< `retention.degrade_after_days`** (30 by default): full nominative
    history, as returned today.

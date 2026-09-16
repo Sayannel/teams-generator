@@ -150,3 +150,15 @@ ALTER TABLE tg_list_sessions
   ADD COLUMN degraded_at DATETIME NULL AFTER encrypted_attendees,
   ADD COLUMN anonymized_at DATETIME NULL AFTER degraded_at,
   ADD KEY idx_session_retention (occurred_at, degraded_at, anonymized_at);
+
+-- Single-row table: the last calendar day the retention job ran. Lets
+-- bootstrap.php trigger it once per day off real traffic (first request of
+-- the day) instead of needing a cron feature the host may not offer — see
+-- maybe_run_daily_retention() in lib/retention.php.
+CREATE TABLE tg_retention_state (
+  id TINYINT UNSIGNED NOT NULL,
+  last_run_date DATE NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO tg_retention_state (id, last_run_date) VALUES (1, NULL);

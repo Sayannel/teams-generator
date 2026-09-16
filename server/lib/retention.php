@@ -100,8 +100,34 @@ function anonymize_expired_sessions(PDO $pdo, int $limit = 20): void
     $stmt->execute();
 }
 
-function run_retention_job(PDO $pdo): void
+function run_retention_job(PDO $pdo, int $limit = 20): void
 {
-    degrade_expired_sessions($pdo);
-    anonymize_expired_sessions($pdo);
+    degrade_expired_sessions($pdo, $limit);
+    anonymize_expired_sessions($pdo, $limit);
+}
+
+/**
+ * Runs the retention job at most once per calendar day, triggered by
+ * whichever request happens to be the first one that day — no cron feature
+ * needed on the host at all. `tg_retention_state` is a single-row table
+ * holding the date it last ran.
+ *
+ * Cheap on every other request of the day: one indexed SELECT. The claim
+ * (UPDATE before running, not after) means a request that dies mid-job
+ * doesn't get retried until tomorrow — acceptable here since the job picks
+ * up any leftovers on its next run regardless (it's a WHERE-scoped batch,
+ * not a queue), and simpler than adding rollback-on-failure bookkeeping for
+ * a job that's already idempotent.
+ */
+function maybe_run_daily_retention(PDO $pdo): void
+{
+    $today = (new DateTimeImmutable())->format('Y-m-d');
+    $lastRun = $pdo->query('SELECT last_run_date FROM tg_retention_state WHERE id = 1')->fetchColumn();
+    if ($lastRun === $today) {
+        return;
+    }
+    $pdo->prepare('UPDATE tg_retention_state SET last_run_date = ? WHERE id = 1')->execute([$today]);
+    // One day's worth of sessions crossing a retention boundary, in one
+    // batch — much larger than the old opportunistic per-request limit.
+    run_retention_job($pdo, 1000);
 }
